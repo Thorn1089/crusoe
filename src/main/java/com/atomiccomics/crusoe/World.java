@@ -17,20 +17,36 @@ public final class World {
             }
         }
 
-        public Coordinates moveUp() {
+        public Coordinates moveNorth() {
             return new Coordinates(x, y + 1);
         }
 
-        public Coordinates moveDown() {
+        public Coordinates moveSouth() {
             return new Coordinates(x, y - 1);
         }
 
-        public Coordinates moveLeft() {
+        public Coordinates moveWest() {
             return new Coordinates(x - 1, y);
         }
 
-        public Coordinates moveRight() {
+        public Coordinates moveEast() {
             return new Coordinates(x + 1, y);
+        }
+
+        public Coordinates moveNortheast() {
+            return moveNorth().moveEast();
+        }
+
+        public Coordinates moveNorthwest() {
+            return moveNorth().moveWest();
+        }
+
+        public Coordinates moveSoutheast() {
+            return moveSouth().moveEast();
+        }
+
+        public Coordinates moveSouthwest() {
+            return moveSouth().moveWest();
         }
     }
 
@@ -92,25 +108,45 @@ public final class World {
     }
 
     public enum Direction {
-        UP {
+        NORTH {
             @Override
             public boolean isLegal(Width width, Height height, Coordinates location) {
                 return location.y() < height.size() - 1;
             }
-        }, DOWN {
+        }, SOUTH {
             @Override
             public boolean isLegal(Width width, Height height, Coordinates location) {
                 return location.y() > 0;
             }
-        }, LEFT {
+        }, WEST {
             @Override
             public boolean isLegal(Width width, Height height, Coordinates location) {
                 return location.x() > 0;
             }
-        }, RIGHT {
+        }, EAST {
             @Override
             public boolean isLegal(Width width, Height height, Coordinates location) {
                 return location.x() < width.size() - 1;
+            }
+        }, NORTHEAST {
+            @Override
+            public boolean isLegal(Width width, Height height, Coordinates location) {
+                return NORTH.isLegal(width, height, location) && EAST.isLegal(width, height, location);
+            }
+        }, SOUTHEAST {
+            @Override
+            public boolean isLegal(Width width, Height height, Coordinates location) {
+                return SOUTH.isLegal(width, height, location) && EAST.isLegal(width, height, location);
+            }
+        }, NORTHWEST {
+            @Override
+            public boolean isLegal(Width width, Height height, Coordinates location) {
+                return NORTH.isLegal(width, height, location) && WEST.isLegal(width, height, location);
+            }
+        }, SOUTHWEST {
+            @Override
+            public boolean isLegal(Width width, Height height, Coordinates location) {
+                return SOUTH.isLegal(width, height, location) && WEST.isLegal(width, height, location);
             }
         };
 
@@ -153,12 +189,16 @@ public final class World {
             throw new IllegalStateException("Already at edge of world!");
         }
 
-        return switch (direction) {
-            case UP -> Collections.singletonList(Event.create(new PlayerMoved(location.moveUp())));
-            case DOWN -> Collections.singletonList(Event.create(new PlayerMoved(location.moveDown())));
-            case LEFT -> Collections.singletonList(Event.create(new PlayerMoved(location.moveLeft())));
-            case RIGHT -> Collections.singletonList(Event.create(new PlayerMoved(location.moveRight())));
-        };
+        return Collections.singletonList(Event.create(new PlayerMoved(switch (direction) {
+            case NORTH -> location.moveNorth();
+            case SOUTH -> location.moveSouth();
+            case WEST -> location.moveWest();
+            case EAST -> location.moveEast();
+            case NORTHEAST -> location.moveNortheast();
+            case NORTHWEST -> location.moveNorthwest();
+            case SOUTHEAST -> location.moveSoutheast();
+            case SOUTHWEST -> location.moveSouthwest();
+        })));
     }
 
     public List<Event<?>> spawnAt(final Coordinates location) {
