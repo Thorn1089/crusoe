@@ -24,7 +24,7 @@ public class GameApplication extends Application {
         Application.launch(args);
     }
 
-    private ScheduledFuture<?> renderer;
+    private ScheduledFuture<?> renderTask;
     private ScheduledFuture<?> ai;
 
     @Override
@@ -53,42 +53,9 @@ public class GameApplication extends Application {
         eventProcessor.accept(new World(state).spawnAt(new World.Coordinates(random.nextInt(32), random.nextInt(32))));
 
         final var executorService = Executors.newScheduledThreadPool(2);
-        renderer = executorService.scheduleAtFixedRate(() -> {
-            final int SCALE_FACTOR = 32;
 
-            final var width = state.width();
-            final var height = state.height();
-            final var location = state.location();
-
-            if(width == null || height == null) {
-                LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
-                return;
-            }
-
-            Platform.runLater(() -> {
-                canvas.setWidth(SCALE_FACTOR * width.size());
-                canvas.setHeight(SCALE_FACTOR * height.size());
-
-                final var graphics = canvas.getGraphicsContext2D();
-                graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-                graphics.setStroke(Color.gray(0));
-                graphics.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-                final Color[] BACKGROUND_FILLS = new Color[] { Color.gray(0.8), Color.gray(0.6) };
-                for(var i = 0; i < width.size(); i++) {
-                    for(var j = 0; j < height.size(); j++) {
-                        if(location != null && location.x() == i && location.y() == j) {
-                            graphics.setFill(Color.rgb(0, 255, 0));
-                        } else {
-                            graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
-                        }
-                        graphics.fillRect(i * SCALE_FACTOR, j * SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR);
-                    }
-                }
-            });
-        }, 17, 17, TimeUnit.MILLISECONDS);
-
+        final var renderer = new Renderer(canvas);
+        renderTask = executorService.scheduleAtFixedRate(() -> Platform.runLater(renderer.render(state)), 17, 17, TimeUnit.MILLISECONDS);
 
         ai = executorService.scheduleAtFixedRate(() -> {
             final var latestWorld = new World(state);
@@ -100,7 +67,7 @@ public class GameApplication extends Application {
 
     @Override
     public void stop() throws Exception {
-        renderer.cancel(true);
+        renderTask.cancel(true);
         ai.cancel(true);
     }
 }
