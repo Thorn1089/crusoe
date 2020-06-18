@@ -1,19 +1,16 @@
 package com.atomiccomics.crusoe;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-public final class Mover {
+public final class Builder {
 
     private World.Dimensions dimensions;
-    private World.Player player;
     private final Set<World.Coordinates> walls = new HashSet<>();
 
     public void handleWorldResized(final Event<WorldResized> event) {
         this.dimensions = event.payload().dimensions();
-    }
-
-    public void handlePlayerMoved(final Event<PlayerMoved> event) {
-        this.player = event.payload().player();
     }
 
     public void handleWallBuilt(final Event<WallBuilt> event) {
@@ -24,22 +21,17 @@ public final class Mover {
         for(final var event : batch) {
             switch (event.name().value()) {
                 case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
-                case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
                 case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
             };
         }
     }
 
-    public boolean isLegalMove(final World.Direction direction) {
+    public boolean canBuildHere(final World.Coordinates location) {
         if(dimensions == null) {
             //The world hasn't been sized yet!
             return false;
         }
-        if(player == null) {
-            //The player hasn't spawned yet!
-            return false;
-        }
-        return direction.isLegal(dimensions, player.position(), walls);
+        return dimensions.contains(location) && !walls.contains(location);
     }
 
 }

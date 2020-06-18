@@ -53,10 +53,12 @@ public class GameApplication extends Application {
 
         final var state = new World.WorldState();
         final var mover = new Mover();
+        final var builder = new Builder();
 
         final Consumer<List<Event<?>>> eventProcessor = batch -> {
             state.process(batch);
             mover.process(batch);
+            builder.process(batch);
         };
 
         final var WIDTH = 32;
@@ -89,23 +91,38 @@ public class GameApplication extends Application {
                 KeyCode.D, World.Direction.EAST
         );
 
+        final var keysPressed = Observable.<KeyEvent>create(emitter -> {
+            final EventHandler<KeyEvent> listener = emitter::onNext;
+            emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
+            scene.addEventHandler(KeyEvent.KEY_PRESSED, listener);
+        }).share();
+
         //TODO Implement diagonal movement - window events and join pairs of directions
-        disposable.add(Observable.<KeyEvent>create(emitter -> {
-                    final EventHandler<KeyEvent> listener = emitter::onNext;
-                    emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
-                    scene.addEventHandler(KeyEvent.KEY_PRESSED, listener);
-                })
+        disposable.add(keysPressed
                 .map(KeyEvent::getCode)
                 .filter(keysToDirections::containsKey)
                 .map(keysToDirections::get)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(d -> {
-                    if(state.player().orientation() == d && mover.legalMoves().contains(d)) {
-                        eventProcessor.accept(new World(state).move(d));
+                .subscribe(direction -> {
+                    if(state.player().orientation() == direction && mover.isLegalMove(direction)) {
+                        eventProcessor.accept(new World(state).move(direction));
                     } else {
-                        eventProcessor.accept(new World(state).turn(d));
+                        eventProcessor.accept(new World(state).turn(direction));
                     }
                 }));
+
+        disposable.add(keysPressed
+                .map(KeyEvent::getCode)
+                .filter(c -> c == KeyCode.E)
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
+                .subscribe(k -> {
+                    final var lookingAt = state.player().lookingAt();
+                    if(builder.canBuildHere(lookingAt)) {
+                        eventProcessor.accept(new World(state).buildWallAt(lookingAt));
+                    }
+                }));
+
+        disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
     }
 
     @Override

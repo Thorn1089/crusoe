@@ -61,6 +61,19 @@ public final class World {
             }
         }
 
+        public Coordinates moveTowards(final Direction direction) {
+            return switch (direction) {
+                case NORTH -> moveNorth();
+                case SOUTH -> moveSouth();
+                case WEST -> moveWest();
+                case EAST -> moveEast();
+                case NORTHEAST -> moveNortheast();
+                case NORTHWEST -> moveNorthwest();
+                case SOUTHEAST -> moveSoutheast();
+                case SOUTHWEST -> moveSouthwest();
+            };
+        }
+
         public Coordinates moveNorth() {
             return new Coordinates(x, y + 1);
         }
@@ -110,7 +123,9 @@ public final class World {
     }
 
     public record Player(Coordinates position, Direction orientation) {
-
+        public Coordinates lookingAt() {
+            return position.moveTowards(orientation);
+        }
     }
 
     public static final class WorldState {
@@ -209,16 +224,7 @@ public final class World {
             throw new IllegalStateException("Can't move into this spot!");
         }
 
-        return Collections.singletonList(Event.create(new PlayerMoved(new Player(switch (direction) {
-            case NORTH -> player.position().moveNorth();
-            case SOUTH -> player.position().moveSouth();
-            case WEST -> player.position().moveWest();
-            case EAST -> player.position().moveEast();
-            case NORTHEAST -> player.position().moveNortheast();
-            case NORTHWEST -> player.position().moveNorthwest();
-            case SOUTHEAST -> player.position().moveSoutheast();
-            case SOUTHWEST -> player.position().moveSouthwest();
-        }, direction))));
+        return Collections.singletonList(Event.create(new PlayerMoved(new Player(player.position().moveTowards(direction), direction))));
     }
 
     public List<Event<?>> spawnAt(final Coordinates location) {
@@ -233,11 +239,17 @@ public final class World {
     public List<Event<?>> buildWallAt(final Coordinates location) {
         assertDimensionsProvided();
 
+        if(!dimensions.contains(location)) {
+            throw new IllegalStateException("Can't build a wall outside of the world bounds!");
+        }
+
         if(Optional.ofNullable(player).map(Player::position).map(location::equals).orElse(false)) {
             throw new IllegalStateException("Can't build a wall on top of the player!");
         }
-        if(!dimensions.contains(location)) {
-            throw new IllegalStateException("Can't build a wall outside of the world bounds!");
+
+        if(walls.contains(location)) {
+            //TODO Should we require callers to pre-check?
+            return Collections.emptyList();
         }
 
         return Collections.singletonList(Event.create(new WallBuilt(location)));
