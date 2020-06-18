@@ -49,10 +49,18 @@ public class Renderer {
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
                     }
-                    graphics.fillRect(i * SCALE_FACTOR, j * SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR);
+                    graphics.fillRect(projectX(dimensions, i), projectY(dimensions, j), SCALE_FACTOR, SCALE_FACTOR);
                 }
             }
         };
+    }
+
+    private int projectX(final World.Dimensions dimensions, final int xCoord) {
+        return xCoord * SCALE_FACTOR;
+    }
+
+    private int projectY(final World.Dimensions dimensions, final int yCoord) {
+        return (dimensions.height() - yCoord - 1) * SCALE_FACTOR;
     }
 
 }
