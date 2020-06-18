@@ -1,13 +1,25 @@
 package com.atomiccomics.crusoe;
 
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableEmitter;
+import io.reactivex.rxjava3.core.ObservableOnSubscribe;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Action;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
@@ -23,8 +35,9 @@ public class GameApplication extends Application {
         Application.launch(args);
     }
 
+    private final CompositeDisposable disposable = new CompositeDisposable();
+
     private ScheduledFuture<?> renderTask;
-    private ScheduledFuture<?> ai;
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -65,17 +78,29 @@ public class GameApplication extends Application {
         final var renderer = new Renderer(canvas);
         renderTask = executorService.scheduleAtFixedRate(() -> Platform.runLater(renderer.render(state)), 17, 17, TimeUnit.MILLISECONDS);
 
-        ai = executorService.scheduleAtFixedRate(() -> {
-            final var latestWorld = new World(state);
-            final var possibilities = mover.legalMoves().toArray(new World.Direction[0]);
-            final var direction = possibilities[random.nextInt(possibilities.length)];
-            eventProcessor.accept(latestWorld.move(direction));
-        }, 1, 1, TimeUnit.SECONDS);
+        final var keysToDirections = Map.of(
+                KeyCode.W, World.Direction.NORTH,
+                KeyCode.A, World.Direction.WEST,
+                KeyCode.S, World.Direction.SOUTH,
+                KeyCode.D, World.Direction.EAST
+        );
+
+        disposable.add(Observable.<KeyEvent>create(emitter -> {
+                    final EventHandler<KeyEvent> listener = emitter::onNext;
+                    emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
+                    scene.addEventHandler(KeyEvent.KEY_PRESSED, listener);
+                })
+                .map(KeyEvent::getCode)
+                .filter(keysToDirections::containsKey)
+                .throttleFirst(250, TimeUnit.MILLISECONDS)
+                .map(keysToDirections::get)
+                .filter(d -> mover.legalMoves().contains(d))
+                .subscribe(d -> eventProcessor.accept(new World(state).move(d))));
     }
 
     @Override
     public void stop() throws Exception {
+        disposable.dispose();
         renderTask.cancel(true);
-        ai.cancel(true);
     }
 }
