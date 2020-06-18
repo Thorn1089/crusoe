@@ -3,13 +3,33 @@ package com.atomiccomics.crusoe;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.paint.Color;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.DoubleStream;
 
 public class Renderer {
+
+    private record Triangle(double[] xCoords, double[] yCoords) {
+        public Triangle {
+            if(xCoords.length != 3) {
+                throw new IllegalArgumentException("Incorrect number of x coordinates provided: " + xCoords.length);
+            }
+            if(yCoords.length != 3) {
+                throw new IllegalArgumentException("Incorrect number of y coordinates provided: " + yCoords.length);
+            }
+        }
+    }
 
     private static final System.Logger LOG = System.getLogger(Renderer.class.getName());
 
     private static final int SCALE_FACTOR = 32;
+
+    private static final Map<World.Direction, Triangle> PLAYER_SHAPES = Map.of(
+            World.Direction.NORTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 0.0, 1.0, 1.0 }),
+            World.Direction.SOUTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 1.0, 0.0, 0.0 }),
+            World.Direction.EAST, new Triangle(new double[] { 1.0, 0.0, 0.0 }, new double[] { 0.5, 1.0, 0.0 }),
+            World.Direction.WEST, new Triangle(new double[] { 0.0, 1.0, 1.0 }, new double[] { 0.5, 1.0, 0.0 })
+    );
 
     private final Canvas canvas;
 
@@ -19,7 +39,7 @@ public class Renderer {
 
     public Runnable render(final World.WorldState state) {
         final var dimensions = state.dimensions();
-        final var location = state.location();
+        final var player = state.player();
         final var walls = state.walls();
 
         if(dimensions == null) {
@@ -42,14 +62,23 @@ public class Renderer {
                 for(var j = 0; j < dimensions.height(); j++) {
                     final var currentCoordinates = new World.Coordinates(i, j);
 
-                    if(Objects.equals(location, currentCoordinates)) {
-                        graphics.setFill(Color.rgb(0, 255, 0));
-                    } else if(walls.contains(currentCoordinates)) {
+                    if(walls.contains(currentCoordinates)) {
                         graphics.setFill(Color.rgb(255, 0, 0));
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
                     }
                     graphics.fillRect(projectX(dimensions, i), projectY(dimensions, j), SCALE_FACTOR, SCALE_FACTOR);
+
+                    if(Objects.equals(player.position(), currentCoordinates)) {
+                        graphics.setFill(Color.rgb(0, 255, 0));
+                        final var triangle = PLAYER_SHAPES.get(player.orientation());
+                        final var xOrigin = i;
+                        final var yOrigin = j;
+                        graphics.fillPolygon(
+                                DoubleStream.of(triangle.xCoords()).map(d -> projectX(dimensions, xOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(triangle.yCoords()).map(d -> projectY(dimensions, yOrigin) + d * SCALE_FACTOR).toArray(),
+                                3);
+                    }
                 }
             }
         };

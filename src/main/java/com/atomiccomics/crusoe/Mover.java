@@ -5,7 +5,7 @@ import java.util.*;
 public final class Mover {
 
     private World.Dimensions dimensions;
-    private World.Coordinates location;
+    private World.Player player;
     private final Set<World.Coordinates> walls = new HashSet<>();
 
     public void handleWorldResized(final Event<WorldResized> event) {
@@ -13,7 +13,7 @@ public final class Mover {
     }
 
     public void handlePlayerMoved(final Event<PlayerMoved> event) {
-        this.location = event.payload().location();
+        this.player = event.payload().player();
     }
 
     public void handleWallBuilt(final Event<WallBuilt> event) {
@@ -35,13 +35,13 @@ public final class Mover {
             //The world hasn't been sized yet!
             return Collections.emptySet();
         }
-        if(location == null) {
+        if(player == null) {
             //The player hasn't spawned yet!
             return Collections.emptySet();
         }
         final var moves = EnumSet.allOf(World.Direction.class);
         for(final var move : World.Direction.values()) {
-            if(!move.isLegal(dimensions, location, walls)) {
+            if(!move.isLegal(dimensions, player.position(), walls)) {
                 moves.remove(move);
             }
         }
