@@ -3,6 +3,8 @@ package com.atomiccomics.crusoe;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.paint.Color;
 
+import java.util.Objects;
+
 public class Renderer {
 
     private static final System.Logger LOG = System.getLogger(Renderer.class.getName());
@@ -18,6 +20,7 @@ public class Renderer {
     public Runnable render(final World.WorldState state) {
         final var dimensions = state.dimensions();
         final var location = state.location();
+        final var walls = state.walls();
 
         if(dimensions == null) {
             LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
@@ -37,8 +40,12 @@ public class Renderer {
             final Color[] BACKGROUND_FILLS = new Color[] { Color.gray(0.8), Color.gray(0.6) };
             for(var i = 0; i < dimensions.width(); i++) {
                 for(var j = 0; j < dimensions.height(); j++) {
-                    if(location != null && location.x() == i && location.y() == j) {
+                    final var currentCoordinates = new World.Coordinates(i, j);
+
+                    if(Objects.equals(location, currentCoordinates)) {
                         graphics.setFill(Color.rgb(0, 255, 0));
+                    } else if(walls.contains(currentCoordinates)) {
+                        graphics.setFill(Color.rgb(255, 0, 0));
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
                     }

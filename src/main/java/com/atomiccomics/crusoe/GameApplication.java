@@ -5,7 +5,6 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.List;
@@ -49,8 +48,17 @@ public class GameApplication extends Application {
             mover.process(batch);
         };
 
-        eventProcessor.accept(new World(state).resize(new World.Dimensions(32, 32)));
-        eventProcessor.accept(new World(state).spawnAt(new World.Coordinates(random.nextInt(32), random.nextInt(32))));
+        final var WIDTH = 32;
+        final var HEIGHT = 32;
+
+        eventProcessor.accept(new World(state).resize(new World.Dimensions(WIDTH, HEIGHT)));
+        eventProcessor.accept(new World(state).spawnAt(new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT))));
+
+        // Set up some random walls
+        final var wallCount = random.nextInt(10) + 10;
+        for(int i = 0; i < wallCount; i++) {
+            eventProcessor.accept(new World(state).buildWallAt(new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT))));
+        }
 
         final var executorService = Executors.newScheduledThreadPool(2);
 

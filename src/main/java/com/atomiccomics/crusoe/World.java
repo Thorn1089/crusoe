@@ -1,9 +1,7 @@
 package com.atomiccomics.crusoe;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public final class World {
 
@@ -59,11 +57,16 @@ public final class World {
                 throw new IllegalArgumentException("Height must be positive and non-zero");
             }
         }
+
+        public boolean contains(final Coordinates coordinates) {
+            return coordinates.x() < width && coordinates.y() < height;
+        }
     }
 
     public static final class WorldState {
         private volatile Dimensions dimensions;
         private volatile Coordinates location;
+        private final Set<Coordinates> walls = new CopyOnWriteArraySet<>();
 
         public WorldState handleWorldResized(final Event<WorldResized> event) {
             this.dimensions = event.payload().dimensions();
@@ -75,12 +78,18 @@ public final class World {
             return this;
         }
 
+        public WorldState handleWallBuilt(final Event<WallBuilt> event) {
+            this.walls.add(event.payload().location());
+            return this;
+        }
+
         public WorldState process(final List<Event<?>> batch) {
             WorldState updatedState = this;
             for(final var event : batch) {
                 updatedState = switch (event.name().value()) {
                     case "WorldResized" -> updatedState.handleWorldResized((Event<WorldResized>) event);
                     case "PlayerMoved" -> updatedState.handlePlayerMoved((Event<PlayerMoved>)event);
+                    case "WallBuilt" -> updatedState.handleWallBuilt((Event<WallBuilt>)event);
                     default -> updatedState;
                 };
             }
@@ -93,6 +102,10 @@ public final class World {
 
         public Coordinates location() {
             return location;
+        }
+
+        public Set<Coordinates> walls() {
+            return new HashSet<>(walls);
         }
     }
 
@@ -196,6 +209,20 @@ public final class World {
             throw new IllegalStateException("Can't spawn twice!");
         }
         return Collections.singletonList(Event.create(new PlayerMoved(location)));
+    }
+
+    public List<Event<?>> buildWallAt(final Coordinates location) {
+        if(dimensions == null) {
+            throw new IllegalStateException("Can't build a wall before the world has been sized!");
+        }
+        if(Objects.equals(this.location, location)) {
+            throw new IllegalStateException("Can't build a wall on top of the player!");
+        }
+        if(!dimensions.contains(location)) {
+            throw new IllegalStateException("Can't build a wall outside of the world bounds!");
+        }
+
+        return Collections.singletonList(Event.create(new WallBuilt(location)));
     }
 
 }
