@@ -98,9 +98,14 @@ public class GameApplication extends Application {
                 .map(KeyEvent::getCode)
                 .filter(keysToDirections::containsKey)
                 .map(keysToDirections::get)
-                .filter(d -> mover.legalMoves().contains(d))
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(d -> eventProcessor.accept(new World(state).move(d))));
+                .subscribe(d -> {
+                    if(state.player().orientation() == d && mover.legalMoves().contains(d)) {
+                        eventProcessor.accept(new World(state).move(d));
+                    } else {
+                        eventProcessor.accept(new World(state).turn(d));
+                    }
+                }));
     }
 
     @Override

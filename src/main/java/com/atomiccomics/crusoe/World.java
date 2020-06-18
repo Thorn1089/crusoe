@@ -193,7 +193,18 @@ public final class World {
         return Collections.singletonList(Event.create(new WorldResized(dimensions)));
     }
 
+    public List<Event<?>> turn(final Direction direction) {
+        assertPlayerSpawned();
+
+        if(player.orientation() == direction) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(Event.create(new PlayerMoved(new Player(player.position(), direction))));
+    }
+
     public List<Event<?>> move(final Direction direction) {
+        assertPlayerSpawned();
+
         if (!direction.isLegal(dimensions, player.position(), walls)) {
             throw new IllegalStateException("Can't move into this spot!");
         }
@@ -211,9 +222,8 @@ public final class World {
     }
 
     public List<Event<?>> spawnAt(final Coordinates location) {
-        if(!Objects.isNull(this.player)) {
-            throw new IllegalStateException("Can't spawn twice!");
-        }
+        assertPlayerNotSpawned();
+
         if(walls != null && walls.contains(location)) {
             throw new IllegalStateException("Can't spawn on top of a wall!");
         }
@@ -221,9 +231,8 @@ public final class World {
     }
 
     public List<Event<?>> buildWallAt(final Coordinates location) {
-        if(dimensions == null) {
-            throw new IllegalStateException("Can't build a wall before the world has been sized!");
-        }
+        assertDimensionsProvided();
+
         if(Optional.ofNullable(player).map(Player::position).map(location::equals).orElse(false)) {
             throw new IllegalStateException("Can't build a wall on top of the player!");
         }
@@ -232,6 +241,24 @@ public final class World {
         }
 
         return Collections.singletonList(Event.create(new WallBuilt(location)));
+    }
+
+    private void assertDimensionsProvided() {
+        if(dimensions == null) {
+            throw new IllegalStateException("Can't build a wall before the world has been sized!");
+        }
+    }
+
+    private void assertPlayerSpawned() {
+        if(player == null) {
+            throw new IllegalStateException("Player has not been spawned yet!");
+        }
+    }
+
+    private void assertPlayerNotSpawned() {
+        if(player != null) {
+            throw new IllegalStateException("Player has already been spawned!");
+        }
     }
 
 }
