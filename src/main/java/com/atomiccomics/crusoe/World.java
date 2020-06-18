@@ -112,55 +112,57 @@ public final class World {
     public enum Direction {
         NORTH {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return location.y() < dimensions.height() - 1;
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveNorth()) && !obstacles.contains(location.moveNorth());
             }
         }, SOUTH {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return location.y() > 0;
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveSouth()) && !obstacles.contains(location.moveSouth());
             }
         }, WEST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return location.x() > 0;
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveWest()) && !obstacles.contains(location.moveWest());
             }
         }, EAST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return location.x() < dimensions.width() - 1;
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveEast()) && !obstacles.contains(location.moveEast());
             }
         }, NORTHEAST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return NORTH.isLegal(dimensions, location) && EAST.isLegal(dimensions, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveNortheast()) && !obstacles.contains(location.moveNortheast());
             }
         }, SOUTHEAST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return SOUTH.isLegal(dimensions, location) && EAST.isLegal(dimensions, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveSoutheast()) && !obstacles.contains(location.moveSoutheast());
             }
         }, NORTHWEST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return NORTH.isLegal(dimensions, location) && WEST.isLegal(dimensions, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveNorthwest()) && !obstacles.contains(location.moveNorthwest());
             }
         }, SOUTHWEST {
             @Override
-            public boolean isLegal(Dimensions dimensions, Coordinates location) {
-                return SOUTH.isLegal(dimensions, location) && WEST.isLegal(dimensions, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles) {
+                return dimensions.contains(location.moveSouthwest()) && !obstacles.contains(location.moveSouthwest());
             }
         };
 
-        public abstract boolean isLegal(Dimensions dimensions, Coordinates location);
+        public abstract boolean isLegal(Dimensions dimensions, Coordinates location, Set<Coordinates> obstacles);
     }
 
     private final Dimensions dimensions;
     private final Coordinates location;
+    private final Set<Coordinates> walls;
 
     public World(final WorldState state) {
         this.dimensions = state.dimensions();
         this.location = state.location();
+        this.walls = state.walls();
     }
 
     public List<Event<?>> resize(final Dimensions dimensions) {
@@ -188,8 +190,8 @@ public final class World {
     }
 
     public List<Event<?>> move(final Direction direction) {
-        if (!direction.isLegal(dimensions, location)) {
-            throw new IllegalStateException("Already at edge of world!");
+        if (!direction.isLegal(dimensions, location, walls)) {
+            throw new IllegalStateException("Can't move into this spot!");
         }
 
         return Collections.singletonList(Event.create(new PlayerMoved(switch (direction) {
