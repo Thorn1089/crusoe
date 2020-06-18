@@ -49,7 +49,7 @@ public class GameApplication extends Application {
             mover.process(batch);
         };
 
-        eventProcessor.accept(new World(state).resize(new World.Width(32), new World.Height(32)));
+        eventProcessor.accept(new World(state).resize(new World.Dimensions(32, 32)));
         eventProcessor.accept(new World(state).spawnAt(new World.Coordinates(random.nextInt(32), random.nextInt(32))));
 
         final var executorService = Executors.newScheduledThreadPool(2);

@@ -16,18 +16,17 @@ public class Renderer {
     }
 
     public Runnable render(final World.WorldState state) {
-        final var width = state.width();
-        final var height = state.height();
+        final var dimensions = state.dimensions();
         final var location = state.location();
 
-        if(width == null || height == null) {
+        if(dimensions == null) {
             LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
             return () -> {};
         }
 
         return () -> {
-            canvas.setWidth(SCALE_FACTOR * width.size());
-            canvas.setHeight(SCALE_FACTOR * height.size());
+            canvas.setWidth(SCALE_FACTOR * dimensions.width());
+            canvas.setHeight(SCALE_FACTOR * dimensions.height());
 
             final var graphics = canvas.getGraphicsContext2D();
             graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -36,8 +35,8 @@ public class Renderer {
             graphics.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
             final Color[] BACKGROUND_FILLS = new Color[] { Color.gray(0.8), Color.gray(0.6) };
-            for(var i = 0; i < width.size(); i++) {
-                for(var j = 0; j < height.size(); j++) {
+            for(var i = 0; i < dimensions.width(); i++) {
+                for(var j = 0; j < dimensions.height(); j++) {
                     if(location != null && location.x() == i && location.y() == j) {
                         graphics.setFill(Color.rgb(0, 255, 0));
                     } else {

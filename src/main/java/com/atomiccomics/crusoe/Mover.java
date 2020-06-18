@@ -7,13 +7,11 @@ import java.util.Set;
 
 public final class Mover {
 
-    private World.Width width;
-    private World.Height height;
+    private World.Dimensions dimensions;
     private World.Coordinates location;
 
     public void handleWorldResized(final Event<WorldResized> event) {
-        this.width = event.payload().width();
-        this.height = event.payload().height();
+        this.dimensions = event.payload().dimensions();
     }
 
     public void handlePlayerMoved(final Event<PlayerMoved> event) {
@@ -30,7 +28,7 @@ public final class Mover {
     }
 
     public Set<World.Direction> legalMoves() {
-        if(width == null || height == null) {
+        if(dimensions == null) {
             //The world hasn't been sized yet!
             return Collections.emptySet();
         }
@@ -40,7 +38,7 @@ public final class Mover {
         }
         final var moves = EnumSet.allOf(World.Direction.class);
         for(final var move : World.Direction.values()) {
-            if(!move.isLegal(width, height, location)) {
+            if(!move.isLegal(dimensions, location)) {
                 moves.remove(move);
             }
         }

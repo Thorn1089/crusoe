@@ -50,30 +50,23 @@ public final class World {
         }
     }
 
-    public record Width(int size) {
-        public Width {
-            if(size <= 0) {
+    public record Dimensions(int width, int height) {
+        public Dimensions {
+            if(width <= 0) {
                 throw new IllegalArgumentException("Width must be positive and non-zero");
             }
-        }
-    }
-
-    public record Height(int size) {
-        public Height {
-            if(size <= 0) {
+            if(height <= 0) {
                 throw new IllegalArgumentException("Height must be positive and non-zero");
             }
         }
     }
 
     public static final class WorldState {
-        private volatile Width width;
-        private volatile Height height;
+        private volatile Dimensions dimensions;
         private volatile Coordinates location;
 
         public WorldState handleWorldResized(final Event<WorldResized> event) {
-            this.width = event.payload().width();
-            this.height = event.payload().height();
+            this.dimensions = event.payload().dimensions();
             return this;
         }
 
@@ -94,12 +87,8 @@ public final class World {
             return updatedState;
         }
 
-        public Width width() {
-            return width;
-        }
-
-        public Height height() {
-            return height;
+        public Dimensions dimensions() {
+            return dimensions;
         }
 
         public Coordinates location() {
@@ -110,82 +99,83 @@ public final class World {
     public enum Direction {
         NORTH {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return location.y() < height.size() - 1;
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return location.y() < dimensions.height() - 1;
             }
         }, SOUTH {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
                 return location.y() > 0;
             }
         }, WEST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
                 return location.x() > 0;
             }
         }, EAST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return location.x() < width.size() - 1;
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return location.x() < dimensions.width() - 1;
             }
         }, NORTHEAST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return NORTH.isLegal(width, height, location) && EAST.isLegal(width, height, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return NORTH.isLegal(dimensions, location) && EAST.isLegal(dimensions, location);
             }
         }, SOUTHEAST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return SOUTH.isLegal(width, height, location) && EAST.isLegal(width, height, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return SOUTH.isLegal(dimensions, location) && EAST.isLegal(dimensions, location);
             }
         }, NORTHWEST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return NORTH.isLegal(width, height, location) && WEST.isLegal(width, height, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return NORTH.isLegal(dimensions, location) && WEST.isLegal(dimensions, location);
             }
         }, SOUTHWEST {
             @Override
-            public boolean isLegal(Width width, Height height, Coordinates location) {
-                return SOUTH.isLegal(width, height, location) && WEST.isLegal(width, height, location);
+            public boolean isLegal(Dimensions dimensions, Coordinates location) {
+                return SOUTH.isLegal(dimensions, location) && WEST.isLegal(dimensions, location);
             }
         };
 
-        public abstract boolean isLegal(Width width, Height height, Coordinates location);
+        public abstract boolean isLegal(Dimensions dimensions, Coordinates location);
     }
 
-    private final Width width;
-    private final Height height;
+    private final Dimensions dimensions;
     private final Coordinates location;
 
     public World(final WorldState state) {
-        this.width = state.width;
-        this.height = state.height;
-        this.location = state.location;
+        this.dimensions = state.dimensions();
+        this.location = state.location();
     }
 
-    public List<Event<?>> resize(final Width width, final Height height) {
-        if(Objects.equals(width, this.width) && Objects.equals(height, this.height)) {
+    public List<Event<?>> resize(final Dimensions dimensions) {
+        if(Objects.equals(dimensions, this.dimensions)) {
             return Collections.emptyList();
         }
 
-        if(this.width == null && this.height == null) {
-            return Collections.singletonList(Event.create(new WorldResized(width, height)));
+        if(this.dimensions == null) {
+            return Collections.singletonList(Event.create(new WorldResized(dimensions)));
         }
 
-        if(width.size() < this.width.size() || height.size() < this.height.size()) {
-            final var newX = Math.min(location.x(), width.size() - 1);
-            final var newY = Math.min(location.y(), height.size() - 1);
+        if(dimensions.width() < this.dimensions.width() || dimensions.height() < this.dimensions.height()) {
+            final var newX = Math.min(location.x(), dimensions.width() - 1);
+            final var newY = Math.min(location.y(), dimensions.height() - 1);
+            final var newLocation = new Coordinates(newX, newY);
 
-            return Arrays.asList(
-                    Event.create(new PlayerMoved(new Coordinates(newX, newY))),
-                    Event.create(new WorldResized(width, height)));
+            if(!Objects.equals(location, newLocation)) {
+                return Arrays.asList(
+                        Event.create(new PlayerMoved(newLocation)),
+                        Event.create(new WorldResized(dimensions)));
+            }
         }
 
-        return Collections.singletonList(Event.create(new WorldResized(width, height)));
+        return Collections.singletonList(Event.create(new WorldResized(dimensions)));
     }
 
     public List<Event<?>> move(final Direction direction) {
-        if (!direction.isLegal(width, height, location)) {
+        if (!direction.isLegal(dimensions, location)) {
             throw new IllegalStateException("Already at edge of world!");
         }
 

@@ -1,5 +1,5 @@
 package com.atomiccomics.crusoe;
 
-public record WorldResized(World.Width width, World.Height height) {
+public record WorldResized(World.Dimensions dimensions) {
 
 }
