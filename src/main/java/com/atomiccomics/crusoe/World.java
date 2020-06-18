@@ -210,6 +210,9 @@ public final class World {
         if(!Objects.isNull(this.location)) {
             throw new IllegalStateException("Can't spawn twice!");
         }
+        if(walls != null && walls.contains(location)) {
+            throw new IllegalStateException("Can't spawn on top of a wall!");
+        }
         return Collections.singletonList(Event.create(new PlayerMoved(location)));
     }
 

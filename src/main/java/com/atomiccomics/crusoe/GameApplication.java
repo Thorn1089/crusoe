@@ -37,8 +37,6 @@ public class GameApplication extends Application {
 
     private final CompositeDisposable disposable = new CompositeDisposable();
 
-    private ScheduledFuture<?> renderTask;
-
     @Override
     public void start(final Stage stage) throws Exception {
         LOG.log(System.Logger.Level.DEBUG, "Displaying initial stage");
@@ -65,7 +63,6 @@ public class GameApplication extends Application {
         final var HEIGHT = 32;
 
         eventProcessor.accept(new World(state).resize(new World.Dimensions(WIDTH, HEIGHT)));
-        eventProcessor.accept(new World(state).spawnAt(new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT))));
 
         // Set up some random walls
         final var wallCount = random.nextInt(10) + 10;
@@ -73,10 +70,17 @@ public class GameApplication extends Application {
             eventProcessor.accept(new World(state).buildWallAt(new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT))));
         }
 
-        final var executorService = Executors.newScheduledThreadPool(2);
+        World.Coordinates playerStartsAt;
+        do {
+            playerStartsAt = new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT));
+        } while(state.walls().contains(playerStartsAt));
+
+        eventProcessor.accept(new World(state).spawnAt(playerStartsAt));
 
         final var renderer = new Renderer(canvas);
-        renderTask = executorService.scheduleAtFixedRate(() -> Platform.runLater(renderer.render(state)), 17, 17, TimeUnit.MILLISECONDS);
+
+        disposable.add(Observable.interval(17, TimeUnit.MILLISECONDS)
+            .subscribe(i -> Platform.runLater(renderer.render(state))));
 
         final var keysToDirections = Map.of(
                 KeyCode.W, World.Direction.NORTH,
@@ -85,6 +89,7 @@ public class GameApplication extends Application {
                 KeyCode.D, World.Direction.EAST
         );
 
+        //TODO Implement diagonal movement - window events and join pairs of directions
         disposable.add(Observable.<KeyEvent>create(emitter -> {
                     final EventHandler<KeyEvent> listener = emitter::onNext;
                     emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
@@ -92,15 +97,14 @@ public class GameApplication extends Application {
                 })
                 .map(KeyEvent::getCode)
                 .filter(keysToDirections::containsKey)
-                .throttleFirst(250, TimeUnit.MILLISECONDS)
                 .map(keysToDirections::get)
                 .filter(d -> mover.legalMoves().contains(d))
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
                 .subscribe(d -> eventProcessor.accept(new World(state).move(d))));
     }
 
     @Override
     public void stop() throws Exception {
         disposable.dispose();
-        renderTask.cancel(true);
     }
 }
