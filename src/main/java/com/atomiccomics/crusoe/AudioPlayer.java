@@ -3,29 +3,32 @@ package com.atomiccomics.crusoe;
 import javafx.scene.media.AudioClip;
 
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 public final class AudioPlayer {
 
     private static final Function<String, String> AUDIO_CLIP_RESOLVER = filename -> "file://" + Paths.get(".", "media", filename).toAbsolutePath().toString();
 
-    private void handleWallBuilt(final Event<WallBuilt> event) {
-        final var clip = new AudioClip(AUDIO_CLIP_RESOLVER.apply("build_wall.wav"));
-        clip.play();
-    }
+    private static final Map<String, AudioClip> EVENTS_TO_CLIPS = new HashMap<>();
 
-    private void handleWallDestroyed(final Event<WallDestroyed> event) {
-        final var clip = new AudioClip(AUDIO_CLIP_RESOLVER.apply("destroy_wall.wav"));
+    private void playClip(final String clipName) {
+        final var clip = EVENTS_TO_CLIPS.computeIfAbsent(clipName, f -> new AudioClip(AUDIO_CLIP_RESOLVER.apply(f)));
+        clip.stop();
         clip.play();
     }
 
     public void process(final List<Event<?>> batch) {
         for(final var event : batch) {
-            switch (event.name().value()) {
-                case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
-                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
-            };
+            Optional.ofNullable(switch(event.name().value()) {
+                case "WallBuilt" -> "build_wall.wav";
+                case "WallDestroyed" -> "destroy_wall.wav";
+                case "PlayerMoved" -> "move.wav";
+                default -> null;
+            }).ifPresent(this::playClip);
         }
     }
 
