@@ -55,11 +55,13 @@ public class GameApplication extends Application {
         final var state = new World.WorldState();
         final var mover = new Mover();
         final var builder = new Builder();
+        final var audioPlayer = new AudioPlayer();
 
         final Consumer<List<Event<?>>> eventProcessor = batch -> {
             state.process(batch);
             mover.process(batch);
             builder.process(batch);
+            audioPlayer.process(batch);
         };
 
         final var WIDTH = 32;

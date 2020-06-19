@@ -9,15 +9,15 @@ public final class Builder {
     private World.Dimensions dimensions;
     private final Set<World.Coordinates> walls = new HashSet<>();
 
-    public void handleWorldResized(final Event<WorldResized> event) {
+    private void handleWorldResized(final Event<WorldResized> event) {
         this.dimensions = event.payload().dimensions();
     }
 
-    public void handleWallBuilt(final Event<WallBuilt> event) {
+    private void handleWallBuilt(final Event<WallBuilt> event) {
         this.walls.add(event.payload().location());
     }
 
-    public void handleWallDestroyed(final Event<WallDestroyed> event) {
+    private void handleWallDestroyed(final Event<WallDestroyed> event) {
         this.walls.remove(event.payload().location());
     }
 
