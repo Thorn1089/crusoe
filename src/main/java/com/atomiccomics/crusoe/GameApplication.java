@@ -18,6 +18,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -97,30 +98,35 @@ public class GameApplication extends Application {
             scene.addEventHandler(KeyEvent.KEY_PRESSED, listener);
         }).share();
 
-        //TODO Implement diagonal movement - window events and join pairs of directions
-        disposable.add(keysPressed
+        //TODO Implement diagonal movement - window events and join pairs of direction
+        final var handlePlayerMovement = keysPressed
                 .map(KeyEvent::getCode)
                 .filter(keysToDirections::containsKey)
                 .map(keysToDirections::get)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(direction -> {
+                .flatMap(direction -> {
                     if(state.player().orientation() == direction && mover.isLegalMove(direction)) {
-                        eventProcessor.accept(new World(state).move(direction));
+                        return Observable.just(new World(state).move(direction));
                     } else {
-                        eventProcessor.accept(new World(state).turn(direction));
+                        return Observable.just(new World(state).turn(direction));
                     }
-                }));
+                });
 
-        disposable.add(keysPressed
+        final var handlePlayerAction = keysPressed
                 .map(KeyEvent::getCode)
                 .filter(c -> c == KeyCode.E)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(k -> {
-                    final var lookingAt = state.player().lookingAt();
-                    if(builder.canBuildHere(lookingAt)) {
-                        eventProcessor.accept(new World(state).buildWallAt(lookingAt));
+                .map(x -> state.player().lookingAt())
+                .flatMap(spot -> {
+                    if(builder.canBuildHere(spot)) {
+                        return Observable.just(new World(state).buildWallAt(spot));
+                    } else if(builder.canDestroyHere(spot)) {
+                        return Observable.just(new World(state).destroyWallAt(spot));
                     }
-                }));
+                    return Observable.empty();
+                });
+
+        disposable.add(Observable.merge(Arrays.asList(handlePlayerMovement, handlePlayerAction)).subscribe(eventProcessor::accept));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
     }

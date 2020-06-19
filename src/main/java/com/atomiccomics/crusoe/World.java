@@ -148,6 +148,11 @@ public final class World {
             return this;
         }
 
+        public WorldState handleWallDestroyed(final Event<WallDestroyed> event) {
+            this.walls.remove(event.payload().location());
+            return this;
+        }
+
         public WorldState process(final List<Event<?>> batch) {
             WorldState updatedState = this;
             for(final var event : batch) {
@@ -155,6 +160,7 @@ public final class World {
                     case "WorldResized" -> updatedState.handleWorldResized((Event<WorldResized>) event);
                     case "PlayerMoved" -> updatedState.handlePlayerMoved((Event<PlayerMoved>)event);
                     case "WallBuilt" -> updatedState.handleWallBuilt((Event<WallBuilt>)event);
+                    case "WallDestroyed" -> updatedState.handleWallDestroyed((Event<WallDestroyed>)event);
                     default -> updatedState;
                 };
             }
@@ -238,26 +244,43 @@ public final class World {
 
     public List<Event<?>> buildWallAt(final Coordinates location) {
         assertDimensionsProvided();
-
-        if(!dimensions.contains(location)) {
-            throw new IllegalStateException("Can't build a wall outside of the world bounds!");
-        }
-
-        if(Optional.ofNullable(player).map(Player::position).map(location::equals).orElse(false)) {
-            throw new IllegalStateException("Can't build a wall on top of the player!");
-        }
+        assertDimensionsContainLocation(location);
+        assertPlayerNotAtLocation(location);
 
         if(walls.contains(location)) {
-            //TODO Should we require callers to pre-check?
             return Collections.emptyList();
         }
 
         return Collections.singletonList(Event.create(new WallBuilt(location)));
     }
 
+    public List<Event<?>> destroyWallAt(final Coordinates location) {
+        assertDimensionsProvided();
+        assertDimensionsContainLocation(location);
+        assertPlayerNotAtLocation(location);
+
+        if(!walls.contains(location)) {
+            return Collections.emptyList();
+        }
+
+        return Collections.singletonList(Event.create(new WallDestroyed(location)));
+    }
+
     private void assertDimensionsProvided() {
         if(dimensions == null) {
             throw new IllegalStateException("Can't build a wall before the world has been sized!");
+        }
+    }
+
+    private void assertDimensionsContainLocation(final Coordinates location) {
+        if(!dimensions.contains(location)) {
+            throw new IllegalStateException("Can't build a wall outside of the world bounds!");
+        }
+    }
+
+    private void assertPlayerNotAtLocation(final Coordinates location) {
+        if(Optional.ofNullable(player).map(Player::position).map(location::equals).orElse(false)) {
+            throw new IllegalStateException("Can't build a wall on top of the player!");
         }
     }
 

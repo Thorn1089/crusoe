@@ -17,11 +17,16 @@ public final class Builder {
         this.walls.add(event.payload().location());
     }
 
+    public void handleWallDestroyed(final Event<WallDestroyed> event) {
+        this.walls.remove(event.payload().location());
+    }
+
     public void process(final List<Event<?>> batch) {
         for(final var event : batch) {
             switch (event.name().value()) {
                 case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
                 case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
+                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
             };
         }
     }
@@ -32,6 +37,14 @@ public final class Builder {
             return false;
         }
         return dimensions.contains(location) && !walls.contains(location);
+    }
+
+    public boolean canDestroyHere(final World.Coordinates location) {
+        if(dimensions == null) {
+            //The world hasn't been sized yet!
+            return false;
+        }
+        return dimensions.contains(location) && walls.contains(location);
     }
 
 }

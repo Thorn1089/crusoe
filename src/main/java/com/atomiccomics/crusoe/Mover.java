@@ -20,12 +20,17 @@ public final class Mover {
         this.walls.add(event.payload().location());
     }
 
+    public void handleWallDestroyed(final Event<WallDestroyed> event) {
+        this.walls.remove(event.payload().location());
+    }
+
     public void process(final List<Event<?>> batch) {
         for(final var event : batch) {
             switch (event.name().value()) {
                 case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
                 case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
                 case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
+                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
             };
         }
     }
