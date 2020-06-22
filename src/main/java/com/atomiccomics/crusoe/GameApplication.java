@@ -1,13 +1,7 @@
 package com.atomiccomics.crusoe;
 
-import io.reactivex.rxjava3.annotations.NonNull;
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.core.ObservableEmitter;
-import io.reactivex.rxjava3.core.ObservableOnSubscribe;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
-import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.functions.Action;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
@@ -22,10 +16,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 public class GameApplication extends Application {
 
@@ -71,16 +64,22 @@ public class GameApplication extends Application {
 
         // Set up some random walls
         final var wallCount = random.nextInt(10) + 10;
-        for(int i = 0; i < wallCount; i++) {
-            eventProcessor.accept(new World(state).buildWallAt(new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT))));
-        }
+        IntStream.range(0, wallCount)
+                .mapToObj(i -> new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT)))
+                .distinct()
+                .forEach(c -> eventProcessor.accept(new World(state).buildWallAt(c)));
 
         World.Coordinates playerStartsAt;
         do {
             playerStartsAt = new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT));
         } while(state.walls().contains(playerStartsAt));
+        eventProcessor.accept(new World(state).spawnPlayerAt(playerStartsAt));
 
-        eventProcessor.accept(new World(state).spawnAt(playerStartsAt));
+        World.Coordinates pickaxeStartsAt;
+        do {
+            pickaxeStartsAt = new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT));
+        } while(state.walls().contains(pickaxeStartsAt) || playerStartsAt.equals(pickaxeStartsAt));
+        eventProcessor.accept(new World(state).spawnItemAt(Item.PICKAXE, pickaxeStartsAt));
 
         final var renderer = new Renderer(canvas);
 

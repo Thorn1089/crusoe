@@ -8,14 +8,9 @@ import com.pholser.junit.quickcheck.Property;
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.generator.Generator;
 import com.pholser.junit.quickcheck.random.SourceOfRandomness;
-import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
-import org.junit.runner.RunWith;
 
-import java.util.Random;
-
-@RunWith(JUnitQuickcheck.class)
 public class WorldTest {
 
     public record DimensionPair(World.Dimensions larger, World.Dimensions smaller) {
@@ -73,7 +68,7 @@ public class WorldTest {
         final var diffY = pair.larger().height() - pair.smaller().height();
         final var playerCoords = new World.Coordinates(pair.smaller().width() + Math.floorDiv(diffX, 2),
                 pair.smaller().height() + Math.floorDiv(diffY, 2));
-        state.process(new World(state).spawnAt(playerCoords));
+        state.process(new World(state).spawnPlayerAt(playerCoords));
         state.process(new World(state).resize(pair.smaller));
 
         Assertions.assertTrue(state.dimensions().contains(state.player().position()));
@@ -83,7 +78,7 @@ public class WorldTest {
     public void playerFacingGivenDirectionAfterTurning(final World.Direction direction) {
         final var state = new World.WorldState();
         state.process(new World(state).resize(new World.Dimensions(64, 64)));
-        state.process(new World(state).spawnAt(new World.Coordinates(32, 32)));
+        state.process(new World(state).spawnPlayerAt(new World.Coordinates(32, 32)));
 
         state.process(new World(state).turn(direction));
 

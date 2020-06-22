@@ -41,6 +41,7 @@ public class Renderer {
         final var dimensions = state.dimensions();
         final var player = state.player();
         final var walls = state.walls();
+        final var items = state.items();
 
         if(dimensions == null) {
             LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
@@ -78,6 +79,15 @@ public class Renderer {
                                 DoubleStream.of(triangle.xCoords()).map(d -> projectX(dimensions, xOrigin) + d * SCALE_FACTOR).toArray(),
                                 DoubleStream.of(triangle.yCoords()).map(d -> projectY(dimensions, yOrigin) + d * SCALE_FACTOR).toArray(),
                                 3);
+                    } else if(items.containsKey(currentCoordinates)) {
+                        //TODO Decide what polygon to draw based on item type
+                        graphics.setFill(Color.rgb(0, 0, 255));
+                        final var xOrigin = i;
+                        final var yOrigin = j;
+                        graphics.fillPolygon(
+                                DoubleStream.of(0.0, 0.5, 1.0, 0.5).map(d -> projectX(dimensions, xOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(0.5, 0.0, 0.5, 1.0).map(d -> projectY(dimensions, yOrigin) + d * SCALE_FACTOR).toArray(),
+                                4);
                     }
                 }
             }

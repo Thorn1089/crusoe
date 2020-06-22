@@ -1,6 +1,7 @@
 package com.atomiccomics.crusoe;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public final class World {
@@ -136,6 +137,7 @@ public final class World {
         private volatile Dimensions dimensions;
         private volatile Player player;
         private final Set<Coordinates> walls = new CopyOnWriteArraySet<>();
+        private final Map<Coordinates, Item> items = new ConcurrentHashMap<>();
 
         public WorldState handleWorldResized(final Event<WorldResized> event) {
             this.dimensions = event.payload().dimensions();
@@ -157,6 +159,11 @@ public final class World {
             return this;
         }
 
+        public WorldState handleItemDropped(final Event<ItemDropped> event) {
+            this.items.put(event.payload().location(), event.payload().item());
+            return this;
+        }
+
         public WorldState process(final List<Event<?>> batch) {
             WorldState updatedState = this;
             for(final var event : batch) {
@@ -165,6 +172,7 @@ public final class World {
                     case "PlayerMoved" -> updatedState.handlePlayerMoved((Event<PlayerMoved>)event);
                     case "WallBuilt" -> updatedState.handleWallBuilt((Event<WallBuilt>)event);
                     case "WallDestroyed" -> updatedState.handleWallDestroyed((Event<WallDestroyed>)event);
+                    case "ItemDropped" -> updatedState.handleItemDropped((Event<ItemDropped>)event);
                     default -> updatedState;
                 };
             }
@@ -181,6 +189,10 @@ public final class World {
 
         public Set<Coordinates> walls() {
             return new HashSet<>(walls);
+        }
+
+        public Map<Coordinates, Item> items() {
+            return new HashMap<>(items);
         }
     }
 
@@ -244,13 +256,23 @@ public final class World {
         return Collections.singletonList(Event.create(new PlayerMoved(new Player(player.position().moveTowards(direction), direction))));
     }
 
-    public List<Event<?>> spawnAt(final Coordinates location) {
+    public List<Event<?>> spawnPlayerAt(final Coordinates location) {
         assertPlayerNotSpawned();
 
         if(walls != null && walls.contains(location)) {
             throw new IllegalStateException("Can't spawn on top of a wall!");
         }
         return Collections.singletonList(Event.create(new PlayerMoved(new Player(location, Direction.NORTH))));
+    }
+
+    public List<Event<?>> spawnItemAt(final Item item, final Coordinates location) {
+        assertDimensionsProvided();
+        assertDimensionsContainLocation(location);
+        assertWallNotAtLocation(location);
+
+        //TODO Check if that item is already present
+
+        return Collections.singletonList(Event.create(new ItemDropped(item, location)));
     }
 
     public List<Event<?>> buildWallAt(final Coordinates location) {
@@ -293,6 +315,16 @@ public final class World {
         if(Optional.ofNullable(player).map(Player::position).map(location::equals).orElse(false)) {
             throw new IllegalStateException("Can't build a wall on top of the player!");
         }
+    }
+
+    private void assertWallNotAtLocation(final Coordinates location) {
+        if(walls.contains(location)) {
+            throw new IllegalStateException("Can't spawn an item inside of a wall!");
+        }
+    }
+
+    private void assertItemNotAtLocation(final Coordinates location) {
+        //TODO
     }
 
     private void assertPlayerSpawned() {
