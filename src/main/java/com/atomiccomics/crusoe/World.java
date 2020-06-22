@@ -120,6 +120,10 @@ public final class World {
         public boolean contains(final Coordinates coordinates) {
             return coordinates.x() < width && coordinates.y() < height;
         }
+
+        public boolean isSmaller(final Dimensions other) {
+            return other.width() > this.width() || other.height() > this.height();
+        }
     }
 
     public record Player(Coordinates position, Direction orientation) {
@@ -195,23 +199,30 @@ public final class World {
             return Collections.emptyList();
         }
 
-        if(this.dimensions == null) {
+        if(this.dimensions == null || !dimensions.isSmaller(this.dimensions)) {
             return Collections.singletonList(Event.create(new WorldResized(dimensions)));
         }
 
-        if(dimensions.width() < this.dimensions.width() || dimensions.height() < this.dimensions.height()) {
+        final var updates = new LinkedList<Event<?>>();
+
+        if(!Objects.isNull(player)) {
             final var newX = Math.min(player.position().x(), dimensions.width() - 1);
             final var newY = Math.min(player.position().y(), dimensions.height() - 1);
             final var newLocation = new Coordinates(newX, newY);
 
             if(!Objects.equals(player.position(), newLocation)) {
-                return Arrays.asList(
-                        Event.create(new PlayerMoved(new Player(newLocation, player.orientation()))),
-                        Event.create(new WorldResized(dimensions)));
+                updates.add(Event.create(new PlayerMoved(new Player(newLocation, player.orientation()))));
             }
         }
 
-        return Collections.singletonList(Event.create(new WorldResized(dimensions)));
+        walls.stream()
+                .filter(w -> !dimensions.contains(w))
+                .map(w -> Event.create(new WallDestroyed(w)))
+                .forEach(updates::add);
+
+        updates.add(Event.create(new WorldResized(dimensions)));
+
+        return updates;
     }
 
     public List<Event<?>> turn(final Direction direction) {
