@@ -1,5 +1,8 @@
 package com.atomiccomics.crusoe;
 
+import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.world.*;
+
 import java.util.*;
 
 public final class Mover {

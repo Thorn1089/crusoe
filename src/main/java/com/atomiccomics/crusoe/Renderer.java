@@ -1,5 +1,6 @@
 package com.atomiccomics.crusoe;
 
+import com.atomiccomics.crusoe.world.World;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.paint.Color;
 

@@ -1,4 +1,4 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.event;
 
 public record Event<T>(Name name, T payload) {
 

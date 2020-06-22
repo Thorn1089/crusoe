@@ -1,5 +1,6 @@
 package com.atomiccomics.crusoe;
 
+import com.atomiccomics.crusoe.event.Event;
 import javafx.scene.media.AudioClip;
 
 import java.nio.file.Paths;

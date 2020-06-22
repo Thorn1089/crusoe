@@ -1,5 +1,11 @@
 package com.atomiccomics.crusoe;
 
+import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.world.WallBuilt;
+import com.atomiccomics.crusoe.world.WallDestroyed;
+import com.atomiccomics.crusoe.world.World;
+import com.atomiccomics.crusoe.world.WorldResized;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

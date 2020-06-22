@@ -1,4 +1,7 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.world;
+
+import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.item.Item;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -159,8 +162,13 @@ public final class World {
             return this;
         }
 
-        public WorldState handleItemDropped(final Event<ItemDropped> event) {
+        public WorldState handleItemPlaced(final Event<ItemPlaced> event) {
             this.items.put(event.payload().location(), event.payload().item());
+            return this;
+        }
+
+        public WorldState handleItemRemoved(final Event<ItemRemoved> event) {
+            this.items.remove(event.payload().location());
             return this;
         }
 
@@ -172,7 +180,8 @@ public final class World {
                     case "PlayerMoved" -> updatedState.handlePlayerMoved((Event<PlayerMoved>)event);
                     case "WallBuilt" -> updatedState.handleWallBuilt((Event<WallBuilt>)event);
                     case "WallDestroyed" -> updatedState.handleWallDestroyed((Event<WallDestroyed>)event);
-                    case "ItemDropped" -> updatedState.handleItemDropped((Event<ItemDropped>)event);
+                    case "ItemPlaced" -> updatedState.handleItemPlaced((Event<ItemPlaced>)event);
+                    case "ItemRemoved" -> updatedState.handleItemRemoved((Event<ItemRemoved>)event);
                     default -> updatedState;
                 };
             }
@@ -199,11 +208,13 @@ public final class World {
     private final Dimensions dimensions;
     private final Player player;
     private final Set<Coordinates> walls;
+    private final Map<Coordinates, Item> items;
 
     public World(final WorldState state) {
         this.dimensions = state.dimensions();
         this.player = state.player();
         this.walls = state.walls();
+        this.items = state.items();
     }
 
     public List<Event<?>> resize(final Dimensions dimensions) {
@@ -270,15 +281,31 @@ public final class World {
         assertDimensionsContainLocation(location);
         assertWallNotAtLocation(location);
 
-        //TODO Check if that item is already present
+        if(Objects.equals(item, items.get(location))) {
+            return Collections.emptyList();
+        }
 
-        return Collections.singletonList(Event.create(new ItemDropped(item, location)));
+        return Collections.singletonList(Event.create(new ItemPlaced(item, location)));
+    }
+
+    public List<Event<?>> removeItemAt(final Item item, final Coordinates location) {
+        assertDimensionsProvided();
+        assertDimensionsContainLocation(location);
+
+        if(!items.containsKey(location)) {
+            return Collections.emptyList();
+        }
+        if(!Objects.equals(item, items.get(location))) {
+            throw new IllegalStateException("Trying to remove the wrong item from this location!");
+        }
+        return Collections.singletonList(Event.create(new ItemRemoved(item, location)));
     }
 
     public List<Event<?>> buildWallAt(final Coordinates location) {
         assertDimensionsProvided();
         assertDimensionsContainLocation(location);
         assertPlayerNotAtLocation(location);
+        assertItemNotAtLocation(location);
 
         if(walls.contains(location)) {
             return Collections.emptyList();
@@ -324,7 +351,9 @@ public final class World {
     }
 
     private void assertItemNotAtLocation(final Coordinates location) {
-        //TODO
+        if(items.containsKey(location)) {
+            throw new IllegalStateException("Can't build a wall on top of an item!");
+        }
     }
 
     private void assertPlayerSpawned() {
