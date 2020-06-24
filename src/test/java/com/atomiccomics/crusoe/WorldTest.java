@@ -9,9 +9,12 @@ import com.pholser.junit.quickcheck.Property;
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.generator.Generator;
 import com.pholser.junit.quickcheck.random.SourceOfRandomness;
+import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.runner.RunWith;
 
+@RunWith(JUnitQuickcheck.class)
 public class WorldTest {
 
     public record DimensionPair(World.Dimensions larger, World.Dimensions smaller) {
