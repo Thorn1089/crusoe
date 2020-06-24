@@ -1,4 +1,4 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.world;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
