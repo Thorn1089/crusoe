@@ -14,6 +14,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
@@ -38,11 +39,13 @@ public class GameApplication extends Application {
     public void start(final Stage stage) throws Exception {
         LOG.log(System.Logger.Level.DEBUG, "Displaying initial stage");
 
-        final var canvas = new Canvas();
-        canvas.setWidth(800);
-        canvas.setHeight(600);
+        final var WIDTH = 24;
+        final var HEIGHT = 24;
+        final var projection = new Projection(new World.Dimensions(WIDTH, HEIGHT), 32);
 
-        final var scene = new Scene(new Pane(canvas));
+        final var canvas = new Canvas();
+
+        final var scene = new Scene(new Pane(canvas), projection.scaleFromWorldSize(WIDTH), projection.scaleFromWorldSize(HEIGHT));
         stage.setScene(scene);
         stage.show();
 
@@ -65,9 +68,6 @@ public class GameApplication extends Application {
         game.register(picker::process);
         game.register(drawer::process);
         game.register(holder::process);
-
-        final var WIDTH = 32;
-        final var HEIGHT = 32;
 
         game.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
@@ -95,7 +95,7 @@ public class GameApplication extends Application {
         final var renderer = new Renderer(canvas);
 
         disposable.add(Observable.interval(17, TimeUnit.MILLISECONDS)
-            .subscribe(i -> Platform.runLater(renderer.render(drawer.snapshot()))));
+            .subscribe(i -> Platform.runLater(renderer.render(drawer.snapshot(), projection))));
 
         final var keysToDirections = Map.of(
                 KeyCode.W, World.Direction.NORTH,
@@ -109,6 +109,19 @@ public class GameApplication extends Application {
             emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
             scene.addEventHandler(KeyEvent.KEY_PRESSED, listener);
         }).share();
+
+        final var mouseClicked = Observable.<MouseEvent>create(emitter -> {
+            final EventHandler<MouseEvent> listener = emitter::onNext;
+            emitter.setCancellable(() -> canvas.removeEventHandler(MouseEvent.MOUSE_CLICKED, listener));
+            canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, listener);
+        });
+
+        disposable.add(mouseClicked.subscribe(e -> {
+            LOG.log(System.Logger.Level.DEBUG, "Scene X,Y: " + e.getSceneX() + "," + e.getSceneY());
+            LOG.log(System.Logger.Level.DEBUG, "Screen X,Y: " + e.getScreenX() + "," + e.getScreenY());
+            LOG.log(System.Logger.Level.DEBUG, "X,Y: " + e.getX() + "," + e.getY());
+
+        }));
 
         final Observable<Function<World, List<Event<?>>>> updateFromPlayerMovement = keysPressed
                 .map(KeyEvent::getCode)

@@ -23,8 +23,6 @@ public class Renderer {
 
     private static final System.Logger LOG = System.getLogger(Renderer.class.getName());
 
-    private static final int SCALE_FACTOR = 32;
-
     private static final Map<World.Direction, Triangle> PLAYER_SHAPES = Map.of(
             World.Direction.NORTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 0.0, 1.0, 1.0 }),
             World.Direction.SOUTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 1.0, 0.0, 0.0 }),
@@ -38,7 +36,7 @@ public class Renderer {
         this.canvas = canvas;
     }
 
-    public Runnable render(final Drawer.Frame frame) {
+    public Runnable render(final Drawer.Frame frame, final Projection projection) {
 
         if(frame.dimensions() == null) {
             LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
@@ -46,8 +44,8 @@ public class Renderer {
         }
 
         return () -> {
-            canvas.setWidth(SCALE_FACTOR * frame.dimensions().width());
-            canvas.setHeight(SCALE_FACTOR * frame.dimensions().height());
+            canvas.setWidth(projection.scaledWidth());
+            canvas.setHeight(projection.scaledHeight());
 
             final var graphics = canvas.getGraphicsContext2D();
             graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -65,7 +63,10 @@ public class Renderer {
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
                     }
-                    graphics.fillRect(projectX(frame.dimensions(), i), projectY(frame.dimensions(), j), SCALE_FACTOR, SCALE_FACTOR);
+                    graphics.fillRect(projection.scaleFromWorldX(i),
+                            projection.scaleFromWorldY(j),
+                            projection.scaleFromWorldSize(1),
+                            projection.scaleFromWorldSize(1));
 
                     if(Objects.equals(frame.player().position(), currentCoordinates)) {
                         graphics.setFill(Color.rgb(0, 255, 0));
@@ -73,8 +74,8 @@ public class Renderer {
                         final var xOrigin = i;
                         final var yOrigin = j;
                         graphics.fillPolygon(
-                                DoubleStream.of(triangle.xCoords()).map(d -> projectX(frame.dimensions(), xOrigin) + d * SCALE_FACTOR).toArray(),
-                                DoubleStream.of(triangle.yCoords()).map(d -> projectY(frame.dimensions(), yOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(triangle.xCoords()).map(d -> projection.scaleFromWorldX(xOrigin + d)).toArray(),
+                                DoubleStream.of(triangle.yCoords()).map(d -> projection.scaleFromWorldY(yOrigin - d)).toArray(),
                                 3);
                     } else if(frame.items().containsKey(currentCoordinates)) {
                         //TODO Decide what polygon to draw based on item type
@@ -82,21 +83,13 @@ public class Renderer {
                         final var xOrigin = i;
                         final var yOrigin = j;
                         graphics.fillPolygon(
-                                DoubleStream.of(0.0, 0.5, 1.0, 0.5).map(d -> projectX(frame.dimensions(), xOrigin) + d * SCALE_FACTOR).toArray(),
-                                DoubleStream.of(0.5, 0.0, 0.5, 1.0).map(d -> projectY(frame.dimensions(), yOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(0.0, 0.5, 1.0, 0.5).map(d -> projection.scaleFromWorldX(xOrigin + d)).toArray(),
+                                DoubleStream.of(0.5, 0.0, 0.5, 1.0).map(d -> projection.scaleFromWorldY(yOrigin - d)).toArray(),
                                 4);
                     }
                 }
             }
         };
-    }
-
-    private int projectX(final World.Dimensions dimensions, final int xCoord) {
-        return xCoord * SCALE_FACTOR;
-    }
-
-    private int projectY(final World.Dimensions dimensions, final int yCoord) {
-        return (dimensions.height() - yCoord - 1) * SCALE_FACTOR;
     }
 
 }
