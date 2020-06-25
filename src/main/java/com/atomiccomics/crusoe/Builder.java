@@ -1,6 +1,9 @@
 package com.atomiccomics.crusoe;
 
 import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.item.Item;
+import com.atomiccomics.crusoe.player.ItemDropped;
+import com.atomiccomics.crusoe.player.ItemPickedUp;
 import com.atomiccomics.crusoe.world.*;
 
 import java.util.HashSet;
@@ -12,6 +15,7 @@ public final class Builder {
     private volatile World.Dimensions dimensions;
     private final Set<World.Coordinates> walls = new HashSet<>();
     private volatile World.Player player;
+    private volatile boolean hasPickaxe = false;
 
     private void handleWorldResized(final Event<WorldResized> event) {
         this.dimensions = event.payload().dimensions();
@@ -29,6 +33,18 @@ public final class Builder {
         this.player = event.payload().player();
     }
 
+    private void handleItemPickedUp(final Event<ItemPickedUp> event) {
+        if(event.payload().item() == Item.PICKAXE) {
+            hasPickaxe = true;
+        }
+    }
+
+    private void handleItemDropped(final Event<ItemDropped> event) {
+        if(event.payload().item() == Item.PICKAXE) {
+            hasPickaxe = false;
+        }
+    }
+
     public void process(final List<Event<?>> batch) {
         for(final var event : batch) {
             switch (event.name().value()) {
@@ -36,24 +52,10 @@ public final class Builder {
                 case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
                 case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
                 case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
+                case "ItemPickedUp" -> handleItemPickedUp((Event<ItemPickedUp>)event);
+                case "ItemDropped" -> handleItemDropped((Event<ItemDropped>)event);
             };
         }
-    }
-
-    public boolean canBuildHere(final World.Coordinates location) {
-        if(dimensions == null) {
-            //The world hasn't been sized yet!
-            return false;
-        }
-        return dimensions.contains(location) && !walls.contains(location);
-    }
-
-    public boolean canDestroyHere(final World.Coordinates location) {
-        if(dimensions == null) {
-            //The world hasn't been sized yet!
-            return false;
-        }
-        return dimensions.contains(location) && walls.contains(location);
     }
 
     public boolean canBuildWherePlayerLooking() {
@@ -61,7 +63,13 @@ public final class Builder {
             //Player hasn't spawned yet!
             return false;
         }
-        return canBuildHere(player.lookingAt());
+        if(dimensions == null) {
+            //The world hasn't been sized yet!
+            return false;
+        }
+
+        final World.Coordinates location = player.lookingAt();
+        return hasPickaxe && dimensions.contains(location) && !walls.contains(location);
     }
 
     public boolean canDestroyWherePlayerLooking() {
@@ -69,7 +77,13 @@ public final class Builder {
             //Player hasn't spawned yet!
             return false;
         }
-        return canDestroyHere(player.lookingAt());
+        if(dimensions == null) {
+            //The world hasn't been sized yet!
+            return false;
+        }
+
+        final World.Coordinates location = player.lookingAt();
+        return hasPickaxe && dimensions.contains(location) && walls.contains(location);
     }
 
     public World.Coordinates playerTarget() {
