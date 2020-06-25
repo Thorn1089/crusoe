@@ -38,6 +38,14 @@ public final class Mover {
         }
     }
 
+    public boolean isFacing(final World.Direction direction) {
+        if(player == null) {
+            //The player hasn't spawned yet!
+            return false;
+        }
+        return player.orientation() == direction;
+    }
+
     public boolean isLegalMove(final World.Direction direction) {
         if(dimensions == null) {
             //The world hasn't been sized yet!

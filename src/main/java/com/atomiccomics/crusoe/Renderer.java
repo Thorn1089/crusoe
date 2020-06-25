@@ -38,20 +38,16 @@ public class Renderer {
         this.canvas = canvas;
     }
 
-    public Runnable render(final World.WorldState state) {
-        final var dimensions = state.dimensions();
-        final var player = state.player();
-        final var walls = state.walls();
-        final var items = state.items();
+    public Runnable render(final Drawer.Frame frame) {
 
-        if(dimensions == null) {
+        if(frame.dimensions() == null) {
             LOG.log(System.Logger.Level.TRACE, "World hasn't been sized yet");
             return () -> {};
         }
 
         return () -> {
-            canvas.setWidth(SCALE_FACTOR * dimensions.width());
-            canvas.setHeight(SCALE_FACTOR * dimensions.height());
+            canvas.setWidth(SCALE_FACTOR * frame.dimensions().width());
+            canvas.setHeight(SCALE_FACTOR * frame.dimensions().height());
 
             final var graphics = canvas.getGraphicsContext2D();
             graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -60,34 +56,34 @@ public class Renderer {
             graphics.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
             final Color[] BACKGROUND_FILLS = new Color[] { Color.gray(0.8), Color.gray(0.6) };
-            for(var i = 0; i < dimensions.width(); i++) {
-                for(var j = 0; j < dimensions.height(); j++) {
+            for(var i = 0; i < frame.dimensions().width(); i++) {
+                for(var j = 0; j < frame.dimensions().height(); j++) {
                     final var currentCoordinates = new World.Coordinates(i, j);
 
-                    if(walls.contains(currentCoordinates)) {
+                    if(frame.walls().contains(currentCoordinates)) {
                         graphics.setFill(Color.rgb(255, 0, 0));
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);
                     }
-                    graphics.fillRect(projectX(dimensions, i), projectY(dimensions, j), SCALE_FACTOR, SCALE_FACTOR);
+                    graphics.fillRect(projectX(frame.dimensions(), i), projectY(frame.dimensions(), j), SCALE_FACTOR, SCALE_FACTOR);
 
-                    if(Objects.equals(player.position(), currentCoordinates)) {
+                    if(Objects.equals(frame.player().position(), currentCoordinates)) {
                         graphics.setFill(Color.rgb(0, 255, 0));
-                        final var triangle = PLAYER_SHAPES.get(player.orientation());
+                        final var triangle = PLAYER_SHAPES.get(frame.player().orientation());
                         final var xOrigin = i;
                         final var yOrigin = j;
                         graphics.fillPolygon(
-                                DoubleStream.of(triangle.xCoords()).map(d -> projectX(dimensions, xOrigin) + d * SCALE_FACTOR).toArray(),
-                                DoubleStream.of(triangle.yCoords()).map(d -> projectY(dimensions, yOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(triangle.xCoords()).map(d -> projectX(frame.dimensions(), xOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(triangle.yCoords()).map(d -> projectY(frame.dimensions(), yOrigin) + d * SCALE_FACTOR).toArray(),
                                 3);
-                    } else if(items.containsKey(currentCoordinates)) {
+                    } else if(frame.items().containsKey(currentCoordinates)) {
                         //TODO Decide what polygon to draw based on item type
                         graphics.setFill(Color.rgb(0, 0, 255));
                         final var xOrigin = i;
                         final var yOrigin = j;
                         graphics.fillPolygon(
-                                DoubleStream.of(0.0, 0.5, 1.0, 0.5).map(d -> projectX(dimensions, xOrigin) + d * SCALE_FACTOR).toArray(),
-                                DoubleStream.of(0.5, 0.0, 0.5, 1.0).map(d -> projectY(dimensions, yOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(0.0, 0.5, 1.0, 0.5).map(d -> projectX(frame.dimensions(), xOrigin) + d * SCALE_FACTOR).toArray(),
+                                DoubleStream.of(0.5, 0.0, 0.5, 1.0).map(d -> projectY(frame.dimensions(), yOrigin) + d * SCALE_FACTOR).toArray(),
                                 4);
                     }
                 }
