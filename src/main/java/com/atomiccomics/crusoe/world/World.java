@@ -56,6 +56,11 @@ public final class World {
     }
 
     public record Coordinates(int x, int y) {
+
+        public static long manhattanDistance(final Coordinates first, final Coordinates second) {
+            return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
+        }
+
         public Coordinates {
             if(x < 0) {
                 throw new IllegalArgumentException("X coordinate cannot be negative");
@@ -63,6 +68,30 @@ public final class World {
             if(y < 0) {
                 throw new IllegalArgumentException("Y coordinate cannot be negative");
             }
+        }
+
+        public Direction to(final Coordinates destination) {
+            final var xDiff = destination.x - x;
+            final var yDiff = destination.y - y;
+
+            if(xDiff > 0 && yDiff > 0) {
+                return Direction.NORTHEAST;
+            } else if(xDiff > 0 && yDiff < 0) {
+                return Direction.SOUTHEAST;
+            } else if(xDiff > 0) {
+                return Direction.EAST;
+            } else if(xDiff < 0 && yDiff > 0) {
+                return Direction.NORTHWEST;
+            } else if(xDiff < 0 && yDiff < 0) {
+                return Direction.SOUTHWEST;
+            } else if(xDiff < 0) {
+                return Direction.WEST;
+            } else if(yDiff > 0) {
+                return Direction.NORTH;
+            } else if (yDiff < 0) {
+                return Direction.SOUTH;
+            }
+            throw new IllegalArgumentException("Destination coordinates are the same as origin coordinates");
         }
 
         public Coordinates moveTowards(final Direction direction) {
@@ -261,7 +290,7 @@ public final class World {
         assertPlayerSpawned();
 
         if (!direction.isLegal(dimensions, player.position(), walls)) {
-            throw new IllegalStateException("Can't move into this spot!");
+            throw new IllegalStateException("Can't move into this spot; moving " + direction + " from " + player.position() + " within a world of size " + dimensions);
         }
 
         return Collections.singletonList(Event.create(new PlayerMoved(new Player(player.position().moveTowards(direction), direction))));
