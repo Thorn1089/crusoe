@@ -64,6 +64,12 @@ public final class Grapher {
                 if(j > 0) {
                     Optional.ofNullable(matrix[i][j-1]).ifPresent(n -> builder.connect(n, node, 1));
                 }
+                if(i > 0 && j > 0) {
+                    Optional.ofNullable(matrix[i-1][j-1]).ifPresent(n -> builder.connect(n, node, 1));
+                }
+                if(i > 0 && j < dimensions.height() - 1) {
+                    Optional.ofNullable(matrix[i-1][j+1]).ifPresent(n -> builder.connect(n, node, 1));
+                }
                 //TODO Connect nodes diagonally
             }
         }

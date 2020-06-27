@@ -27,7 +27,11 @@ public class Renderer {
             World.Direction.NORTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 0.0, 1.0, 1.0 }),
             World.Direction.SOUTH, new Triangle(new double[] { 0.5, 1.0, 0.0 }, new double[] { 1.0, 0.0, 0.0 }),
             World.Direction.EAST, new Triangle(new double[] { 1.0, 0.0, 0.0 }, new double[] { 0.5, 1.0, 0.0 }),
-            World.Direction.WEST, new Triangle(new double[] { 0.0, 1.0, 1.0 }, new double[] { 0.5, 1.0, 0.0 })
+            World.Direction.WEST, new Triangle(new double[] { 0.0, 1.0, 1.0 }, new double[] { 0.5, 1.0, 0.0 }),
+            World.Direction.NORTHEAST, new Triangle(new double[]{ 0.75, 1.0, 0.0 }, new double[]{ 1.0, 0.0, 0.25 }),
+            World.Direction.NORTHWEST, new Triangle(new double[]{ 0.0, 0.25, 1.0 }, new double[]{ 0.0, 1.0, 0.25 }),
+            World.Direction.SOUTHEAST, new Triangle(new double[]{ 0.75, 1.0, 0.0 }, new double[]{ 0.0, 1.0, 0.75 }),
+            World.Direction.SOUTHWEST, new Triangle(new double[]{ 0.0, 0.25, 1.0 }, new double[]{ 1.0, 0.0, 0.75 })
     );
 
     private final Canvas canvas;
