@@ -16,6 +16,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
@@ -113,11 +114,19 @@ public class GameApplication extends Application {
             canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, listener);
         });
 
-        disposable.add(mouseClicked.map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
-            .throttleFirst(100, TimeUnit.MILLISECONDS)
-            .subscribe(dest -> {
-                game.updatePlayer(p -> p.setDestination(dest));
-            }));
+        disposable.add(mouseClicked
+                .filter(e -> e.getButton() == MouseButton.PRIMARY)
+                .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
+                .filter(navigator::isReachable)
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
+                .subscribe(dest -> {
+                    game.updatePlayer(p -> p.setDestination(dest));
+                }));
+
+        disposable.add(mouseClicked
+                .filter(e -> e.getButton() == MouseButton.SECONDARY)
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
+                .subscribe(x -> game.updatePlayer(Player::clearDestination)));
 
         final Observable<Function<World, List<Event<?>>>> updateFromPlayerAction = keysPressed
                 .map(KeyEvent::getCode)

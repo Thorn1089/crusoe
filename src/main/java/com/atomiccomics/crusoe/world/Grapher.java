@@ -72,7 +72,7 @@ public final class Grapher {
         isDirty = false;
     }
 
-    public List<World.Direction> findPathBetween(World.Coordinates start, World.Coordinates end) {
+    public List<World.Direction> findPathBetween(final World.Coordinates start, final World.Coordinates end) {
         if(isDirty) {
             rebuildGraph();
         }
@@ -97,5 +97,13 @@ public final class Grapher {
         }
 
         return directions;
+    }
+
+    public boolean isReachable(final World.Coordinates destination) {
+        if(isDirty) {
+            rebuildGraph();
+        }
+
+        return worldToGraph.containsKey(destination);
     }
 }

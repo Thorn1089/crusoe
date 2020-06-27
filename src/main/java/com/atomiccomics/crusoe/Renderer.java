@@ -58,7 +58,9 @@ public class Renderer {
                 for(var j = 0; j < frame.dimensions().height(); j++) {
                     final var currentCoordinates = new World.Coordinates(i, j);
 
-                    if(frame.walls().contains(currentCoordinates)) {
+                    if(Objects.equals(frame.destination(), currentCoordinates)) {
+                        graphics.setFill(Color.rgb(0, 64, 128));
+                    } else if(frame.walls().contains(currentCoordinates)) {
                         graphics.setFill(Color.rgb(255, 0, 0));
                     } else {
                         graphics.setFill(BACKGROUND_FILLS[(i + j) % 2]);

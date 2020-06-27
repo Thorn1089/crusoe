@@ -41,6 +41,9 @@ public final class Navigator {
         final RepeatingTask task = () -> {
             final var step = path.remove();
             worldClient.update(w -> w.move(step));
+            if(path.isEmpty()) {
+                playerClient.update(Player::clearDestination);
+            }
             return path.isEmpty();
         };
         runningTask = scheduler.scheduleRepeatingTask(task);
@@ -62,6 +65,10 @@ public final class Navigator {
                 case "DestinationCleared" -> handleDestinationCleared((Event<DestinationCleared>)event);
             }
         }
+    }
+
+    public boolean isReachable(final World.Coordinates destination) {
+        return grapher.isReachable(destination);
     }
 
 }
