@@ -2,7 +2,9 @@ package com.atomiccomics.crusoe;
 
 import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
+import com.atomiccomics.crusoe.player.Navigator;
 import com.atomiccomics.crusoe.player.Player;
+import com.atomiccomics.crusoe.time.ExecutorScheduler;
 import com.atomiccomics.crusoe.world.Grapher;
 import com.atomiccomics.crusoe.world.World;
 import io.reactivex.rxjava3.core.Observable;
@@ -19,6 +21,7 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,6 +37,8 @@ public class GameApplication extends Application {
     }
 
     private final CompositeDisposable disposable = new CompositeDisposable();
+
+    private final ExecutorScheduler scheduler = new ExecutorScheduler(Executors.newSingleThreadScheduledExecutor());
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -56,18 +61,17 @@ public class GameApplication extends Application {
         final var mover = new Mover();
         final var builder = new Builder();
         final var audioPlayer = new AudioPlayer();
-        final var grapher = new Grapher();
         final var drawer = new Drawer();
         final var holder = new Holder();
         final var picker = new Picker(game::updatePlayer, game::updateWorld);
+        final var navigator = new Navigator(game::updateWorld, game::updatePlayer, scheduler);
 
         game.register(mover::process);
         game.register(builder::process);
-        game.register(audioPlayer::process);
-        game.register(grapher::process);
         game.register(picker::process);
         game.register(drawer::process);
         game.register(holder::process);
+        game.register(navigator::process);
 
         game.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
@@ -97,13 +101,6 @@ public class GameApplication extends Application {
         disposable.add(Observable.interval(17, TimeUnit.MILLISECONDS)
             .subscribe(i -> Platform.runLater(renderer.render(drawer.snapshot(), projection))));
 
-        final var keysToDirections = Map.of(
-                KeyCode.W, World.Direction.NORTH,
-                KeyCode.A, World.Direction.WEST,
-                KeyCode.S, World.Direction.SOUTH,
-                KeyCode.D, World.Direction.EAST
-        );
-
         final var keysPressed = Observable.<KeyEvent>create(emitter -> {
             final EventHandler<KeyEvent> listener = emitter::onNext;
             emitter.setCancellable(() -> scene.removeEventHandler(KeyEvent.KEY_PRESSED, listener));
@@ -116,25 +113,11 @@ public class GameApplication extends Application {
             canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, listener);
         });
 
-        disposable.add(mouseClicked.subscribe(e -> {
-            LOG.log(System.Logger.Level.DEBUG, "Scene X,Y: " + e.getSceneX() + "," + e.getSceneY());
-            LOG.log(System.Logger.Level.DEBUG, "Screen X,Y: " + e.getScreenX() + "," + e.getScreenY());
-            LOG.log(System.Logger.Level.DEBUG, "X,Y: " + e.getX() + "," + e.getY());
-
-        }));
-
-        final Observable<Function<World, List<Event<?>>>> updateFromPlayerMovement = keysPressed
-                .map(KeyEvent::getCode)
-                .filter(keysToDirections::containsKey)
-                .map(keysToDirections::get)
-                .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .flatMap(direction -> {
-                   if(mover.isFacing(direction) && mover.isLegalMove(direction)) {
-                        return Observable.just(w -> w.move(direction));
-                   } else {
-                       return Observable.just(w -> w.turn(direction));
-                   }
-                });
+        disposable.add(mouseClicked.map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
+            .throttleFirst(100, TimeUnit.MILLISECONDS)
+            .subscribe(dest -> {
+                game.updatePlayer(p -> p.setDestination(dest));
+            }));
 
         final Observable<Function<World, List<Event<?>>>> updateFromPlayerAction = keysPressed
                 .map(KeyEvent::getCode)
@@ -161,15 +144,18 @@ public class GameApplication extends Application {
                     return Observable.empty();
                 });
 
-        disposable.add(Observable.merge(updateFromPlayerMovement, updateFromPlayerAction)
+        disposable.add(updateFromPlayerAction
                 .subscribe(game::updateWorld));
         disposable.add(updateFromPlayerDrop.subscribe(game::updatePlayer));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
+
+        scheduler.start();
     }
 
     @Override
     public void stop() throws Exception {
+        scheduler.stop();
         disposable.dispose();
     }
 }

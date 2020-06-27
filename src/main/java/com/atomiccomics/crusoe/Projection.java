@@ -32,4 +32,12 @@ public final class Projection {
         return val * scaleFactor;
     }
 
+    public double scaleToWorldX(final double xCoord) {
+        return Math.floor(xCoord / scaleFactor);
+    }
+
+    public double scaleToWorldY(final double yCoord) {
+        return Math.floor(dimensions.height() - (yCoord / scaleFactor));
+    }
+
 }
