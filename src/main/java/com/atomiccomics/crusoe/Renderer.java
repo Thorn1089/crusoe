@@ -95,6 +95,18 @@ public class Renderer {
                     }
                 }
             }
+
+            if(!frame.isRunning()) {
+                graphics.setStroke(Color.gray(0.2));
+                graphics.setFill(Color.gray(0.8));
+                graphics.strokeRect(projection.scaledWidth() / 5, projection.scaledHeight() / 5 * 2,
+                        projection.scaledWidth() / 5 * 3, projection.scaledHeight() / 5);
+                graphics.fillRect(projection.scaledWidth() / 5, projection.scaledHeight() / 5 * 2,
+                        projection.scaledWidth() / 5 * 3, projection.scaledHeight() / 5);
+
+                graphics.setFill(Color.gray(0.0));
+                graphics.fillText("Paused", projection.scaledWidth() / 2 - 16, projection.scaledHeight() / 2);
+            }
         };
     }
 

@@ -16,7 +16,8 @@ public class Drawer {
                         World.Player player,
                         Set<World.Coordinates> walls,
                         Map<World.Coordinates, Item> items,
-                        World.Coordinates destination) {
+                        World.Coordinates destination,
+                        boolean isRunning) {
 
     }
 
@@ -25,6 +26,7 @@ public class Drawer {
     private volatile World.Coordinates destination;
     private final Set<World.Coordinates> walls = new CopyOnWriteArraySet<>();
     private final Map<World.Coordinates, Item> items = new ConcurrentHashMap<>();
+    private volatile boolean isRunning = false;
 
     @Handler(WorldResized.class)
     public void handleWorldResized(final WorldResized event) {
@@ -66,8 +68,18 @@ public class Drawer {
         this.destination = null;
     }
 
+    @Handler(GamePaused.class)
+    public void handleGamePaused(final GamePaused event) {
+        isRunning = false;
+    }
+
+    @Handler(GameResumed.class)
+    public void handleGameResumed(final GameResumed event) {
+        isRunning = true;
+    }
+
     public Frame snapshot() {
-        return new Frame(dimensions, player, Set.copyOf(walls), Map.copyOf(items), destination);
+        return new Frame(dimensions, player, Set.copyOf(walls), Map.copyOf(items), destination, isRunning);
     }
     
 }
