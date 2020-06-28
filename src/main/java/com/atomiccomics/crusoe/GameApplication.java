@@ -123,20 +123,6 @@ public class GameApplication extends Application {
             canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, listener);
         });
 
-        disposable.add(mouseClicked
-                .filter(e -> e.getButton() == MouseButton.PRIMARY)
-                .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
-                .filter(navigator::isReachable)
-                .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(dest -> {
-                    engine.updatePlayer(p -> p.setDestination(dest));
-                }));
-
-        disposable.add(mouseClicked
-                .filter(e -> e.getButton() == MouseButton.SECONDARY)
-                .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(x -> engine.updatePlayer(Player::clearDestination)));
-
         final Observable<Function<World, List<Event<?>>>> updateFromPlayerAction = keysPressed
                 .map(KeyEvent::getCode)
                 .filter(c -> c == KeyCode.E)
@@ -162,12 +148,29 @@ public class GameApplication extends Application {
                     return Observable.empty();
                 });
 
+        final Observable<Function<Player, List<Event<?>>>> updateFromPlayerNavigate = mouseClicked
+                .filter(e -> e.getButton() == MouseButton.PRIMARY)
+                .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
+                .filter(navigator::isReachable)
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
+                .map(dest -> p -> p.setDestination(dest));
+
+        final Observable<Function<Player, List<Event<?>>>> updateFromPlayerCancel = mouseClicked
+                .filter(e -> e.getButton() == MouseButton.SECONDARY)
+                .throttleFirst(100, TimeUnit.MILLISECONDS)
+                .map(x -> Player::clearDestination);
+
         disposable.add(updateFromPlayerAction
+                .filter(f -> runner.isGameRunning())
                 .subscribe(engine::updateWorld));
-        disposable.add(updateFromPlayerDrop.subscribe(engine::updatePlayer));
+        disposable.add(Observable.merge(
+                updateFromPlayerDrop,
+                updateFromPlayerNavigate,
+                updateFromPlayerCancel)
+                .filter(f -> runner.isGameRunning())
+                .subscribe(engine::updatePlayer));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
-
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.SPACE).subscribe(x -> {
             engine.updateGame(g -> runner.isGameRunning() ? g.pause() : g.resume());
         }));
