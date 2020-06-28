@@ -59,7 +59,7 @@ public class GameApplication extends Application {
         final var scene = new Scene(new Pane(canvas), projection.scaleFromWorldSize(WIDTH), projection.scaleFromWorldSize(HEIGHT));
         stage.setScene(scene);
 
-        final var game = new Engine();
+        final var engine = new Engine();
 
         final var random = new Random();
 
@@ -68,39 +68,39 @@ public class GameApplication extends Application {
         final var audioPlayer = new AudioPlayer();
         final var drawer = new Drawer();
         final var holder = new Holder();
-        final var picker = new Picker(game::updatePlayer, game::updateWorld);
-        final var navigator = new Navigator(grapher, game::updateWorld, game::updatePlayer, scheduler);
+        final var picker = new Picker(engine::updatePlayer, engine::updateWorld);
+        final var navigator = new Navigator(grapher, engine::updateWorld, engine::updatePlayer, scheduler);
 
-        game.register(Component.wrap(grapher));
-        game.register(Component.wrap(builder));
-        game.register(audioPlayer::process);
-        game.register(Component.wrap(picker));
-        game.register(Component.wrap(drawer));
-        game.register(Component.wrap(holder));
-        game.register(Component.wrap(navigator));
+        engine.register(Component.wrap(grapher));
+        engine.register(Component.wrap(builder));
+        engine.register(audioPlayer::process);
+        engine.register(Component.wrap(picker));
+        engine.register(Component.wrap(drawer));
+        engine.register(Component.wrap(holder));
+        engine.register(Component.wrap(navigator));
 
-        game.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
+        engine.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
         // Set up some random walls
         final var wallCount = random.nextInt(10) + 10;
         final var walls = IntStream.range(0, wallCount)
                 .mapToObj(i -> new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT)))
                 .collect(Collectors.toSet());
-        walls.forEach(c -> game.updateWorld(w -> w.buildWallAt(c)));
+        walls.forEach(c -> engine.updateWorld(w -> w.buildWallAt(c)));
 
         World.Coordinates candidateStartingLocation;
         do {
             candidateStartingLocation = new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT));
         } while(walls.contains(candidateStartingLocation));
         final var playerStartsAt = candidateStartingLocation;
-        game.updateWorld(w -> w.spawnPlayerAt(playerStartsAt));
+        engine.updateWorld(w -> w.spawnPlayerAt(playerStartsAt));
 
         World.Coordinates candidateItemLocation;
         do {
             candidateItemLocation = new World.Coordinates(random.nextInt(WIDTH), random.nextInt(HEIGHT));
         } while(walls.contains(candidateItemLocation) || playerStartsAt.equals(candidateItemLocation));
         final var pickaxeStartsAt = candidateItemLocation;
-        game.updateWorld(w -> w.spawnItemAt(Item.PICKAXE, pickaxeStartsAt));
+        engine.updateWorld(w -> w.spawnItemAt(Item.PICKAXE, pickaxeStartsAt));
 
         final var renderer = new Renderer(canvas);
 
@@ -125,13 +125,13 @@ public class GameApplication extends Application {
                 .filter(navigator::isReachable)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
                 .subscribe(dest -> {
-                    game.updatePlayer(p -> p.setDestination(dest));
+                    engine.updatePlayer(p -> p.setDestination(dest));
                 }));
 
         disposable.add(mouseClicked
                 .filter(e -> e.getButton() == MouseButton.SECONDARY)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribe(x -> game.updatePlayer(Player::clearDestination)));
+                .subscribe(x -> engine.updatePlayer(Player::clearDestination)));
 
         final Observable<Function<World, List<Event<?>>>> updateFromPlayerAction = keysPressed
                 .map(KeyEvent::getCode)
@@ -159,8 +159,8 @@ public class GameApplication extends Application {
                 });
 
         disposable.add(updateFromPlayerAction
-                .subscribe(game::updateWorld));
-        disposable.add(updateFromPlayerDrop.subscribe(game::updatePlayer));
+                .subscribe(engine::updateWorld));
+        disposable.add(updateFromPlayerDrop.subscribe(engine::updatePlayer));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
 
