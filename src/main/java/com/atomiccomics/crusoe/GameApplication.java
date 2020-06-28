@@ -12,7 +12,6 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -60,25 +59,25 @@ public class GameApplication extends Application {
         final var scene = new Scene(new Pane(canvas), projection.scaleFromWorldSize(WIDTH), projection.scaleFromWorldSize(HEIGHT));
         stage.setScene(scene);
 
-        final var game = new Game();
+        final var game = new Engine();
 
         final var random = new Random();
 
-        final var mover = new Mover();
+        final Grapher grapher = new Grapher();
         final var builder = new Builder();
         final var audioPlayer = new AudioPlayer();
         final var drawer = new Drawer();
         final var holder = new Holder();
         final var picker = new Picker(game::updatePlayer, game::updateWorld);
-        final var navigator = new Navigator(game::updateWorld, game::updatePlayer, scheduler);
+        final var navigator = new Navigator(grapher, game::updateWorld, game::updatePlayer, scheduler);
 
-        game.register(mover::process);
-        game.register(builder::process);
+        game.register(Component.wrap(grapher));
+        game.register(Component.wrap(builder));
         game.register(audioPlayer::process);
-        game.register(picker::process);
-        game.register(drawer::process);
-        game.register(holder::process);
-        game.register(navigator::process);
+        game.register(Component.wrap(picker));
+        game.register(Component.wrap(drawer));
+        game.register(Component.wrap(holder));
+        game.register(Component.wrap(navigator));
 
         game.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 

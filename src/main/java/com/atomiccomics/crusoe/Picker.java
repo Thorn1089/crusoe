@@ -1,12 +1,10 @@
 package com.atomiccomics.crusoe;
 
-import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.ItemDropped;
 import com.atomiccomics.crusoe.player.PlayerClient;
 import com.atomiccomics.crusoe.world.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,20 +22,23 @@ public final class Picker {
         this.worldClient = worldClient;
     }
 
-    private void handleItemPlaced(final Event<ItemPlaced> event) {
-        this.items.put(event.payload().location(), event.payload().item());
+    @Handler(ItemPlaced.class)
+    public void handleItemPlaced(final ItemPlaced event) {
+        this.items.put(event.location(), event.item());
     }
 
-    private void handleItemRemoved(final Event<ItemRemoved> event) {
-        this.items.remove(event.payload().location(), event.payload().item());
+    @Handler(ItemRemoved.class)
+    public void handleItemRemoved(final ItemRemoved event) {
+        this.items.remove(event.location(), event.item());
     }
 
-    private void handlePlayerMoved(final Event<PlayerMoved> event) {
-        if(Objects.equals(this.player, event.payload().player().position())) {
+    @Handler(PlayerMoved.class)
+    public void handlePlayerMoved(final PlayerMoved event) {
+        if(Objects.equals(this.player, event.player().position())) {
             // Don't count turns; otherwise turning after a drop picks the item back up
             return;
         }
-        this.player = event.payload().player().position();
+        this.player = event.player().position();
         if(items.containsKey(player)) {
             final var item = items.get(player);
             playerClient.update(p -> p.pickUpItem(item));
@@ -45,19 +46,9 @@ public final class Picker {
         }
     }
 
-    private void handleItemDropped(final Event<ItemDropped> event) {
-        worldClient.update(w -> w.spawnItemAt(event.payload().item(), player));
-    }
-
-    public void process(final List<Event<?>> batch) {
-        for(final var event : batch) {
-            switch (event.name().value()) {
-                case "ItemPlaced" -> handleItemPlaced((Event<ItemPlaced>)event);
-                case "ItemRemoved" -> handleItemRemoved((Event<ItemRemoved>)event);
-                case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
-                case "ItemDropped" -> handleItemDropped((Event<ItemDropped>)event);
-            }
-        }
+    @Handler(ItemDropped.class)
+    public void handleItemDropped(final ItemDropped event) {
+        worldClient.update(w -> w.spawnItemAt(event.item(), player));
     }
 
 }

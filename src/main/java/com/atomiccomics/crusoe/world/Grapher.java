@@ -1,6 +1,6 @@
 package com.atomiccomics.crusoe.world;
 
-import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.Handler;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -15,29 +15,22 @@ public final class Grapher {
     private volatile boolean isDirty = false;
     private volatile Graph graph;
 
-    private void handleWorldResized(final Event<WorldResized> event) {
-        dimensions = event.payload().dimensions();
+    @Handler(WorldResized.class)
+    public void handleWorldResized(final WorldResized event) {
+        dimensions = event.dimensions();
         isDirty = true;
     }
 
-    private void handleWallBuilt(final Event<WallBuilt> event) {
-        obstacles.add(event.payload().location());
+    @Handler(WallBuilt.class)
+    private void handleWallBuilt(final WallBuilt event) {
+        obstacles.add(event.location());
         isDirty = true;
     }
 
-    private void handleWallDestroyed(final Event<WallDestroyed> event) {
-        obstacles.remove(event.payload().location());
+    @Handler(WallDestroyed.class)
+    private void handleWallDestroyed(final WallDestroyed event) {
+        obstacles.remove(event.location());
         isDirty = true;
-    }
-
-    public void process(final List<Event<?>> batch) {
-        for(final var event : batch) {
-            switch (event.name().value()) {
-                case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
-                case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
-                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
-            };
-        }
     }
 
     private void rebuildGraph() {

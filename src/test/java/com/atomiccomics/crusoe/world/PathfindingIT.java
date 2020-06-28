@@ -2,7 +2,7 @@ package com.atomiccomics.crusoe.world;
 
 import static org.hamcrest.CoreMatchers.is;
 
-import com.atomiccomics.crusoe.Game;
+import com.atomiccomics.crusoe.Engine;
 import com.atomiccomics.crusoe.event.Event;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,7 @@ public class PathfindingIT {
 
     @Test
     void pathBetweenPlayerAndGoalCanBeFollowed() {
-        final var game = new Game();
+        final var game = new Engine();
 
         final var grapher = new Grapher();
         final var playerPositions = new LinkedList<World.Coordinates>();

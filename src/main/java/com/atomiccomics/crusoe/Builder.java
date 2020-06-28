@@ -1,13 +1,11 @@
 package com.atomiccomics.crusoe;
 
-import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.ItemDropped;
 import com.atomiccomics.crusoe.player.ItemPickedUp;
 import com.atomiccomics.crusoe.world.*;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public final class Builder {
@@ -17,44 +15,37 @@ public final class Builder {
     private volatile World.Player player;
     private volatile boolean hasPickaxe = false;
 
-    private void handleWorldResized(final Event<WorldResized> event) {
-        this.dimensions = event.payload().dimensions();
+    @Handler(WorldResized.class)
+    public void handleWorldResized(final WorldResized event) {
+        this.dimensions = event.dimensions();
     }
 
-    private void handleWallBuilt(final Event<WallBuilt> event) {
-        this.walls.add(event.payload().location());
+    @Handler(WallBuilt.class)
+    public void handleWallBuilt(final WallBuilt event) {
+        this.walls.add(event.location());
     }
 
-    private void handleWallDestroyed(final Event<WallDestroyed> event) {
-        this.walls.remove(event.payload().location());
+    @Handler(WallDestroyed.class)
+    public void handleWallDestroyed(final WallDestroyed event) {
+        this.walls.remove(event.location());
     }
 
-    private void handlePlayerMoved(final Event<PlayerMoved> event) {
-        this.player = event.payload().player();
+    @Handler(PlayerMoved.class)
+    public void handlePlayerMoved(final PlayerMoved event) {
+        this.player = event.player();
     }
 
-    private void handleItemPickedUp(final Event<ItemPickedUp> event) {
-        if(event.payload().item() == Item.PICKAXE) {
+    @Handler(ItemPickedUp.class)
+    public void handleItemPickedUp(final ItemPickedUp event) {
+        if(event.item() == Item.PICKAXE) {
             hasPickaxe = true;
         }
     }
 
-    private void handleItemDropped(final Event<ItemDropped> event) {
-        if(event.payload().item() == Item.PICKAXE) {
+    @Handler(ItemDropped.class)
+    public void handleItemDropped(final ItemDropped event) {
+        if(event.item() == Item.PICKAXE) {
             hasPickaxe = false;
-        }
-    }
-
-    public void process(final List<Event<?>> batch) {
-        for(final var event : batch) {
-            switch (event.name().value()) {
-                case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
-                case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
-                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
-                case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
-                case "ItemPickedUp" -> handleItemPickedUp((Event<ItemPickedUp>)event);
-                case "ItemDropped" -> handleItemDropped((Event<ItemDropped>)event);
-            };
         }
     }
 

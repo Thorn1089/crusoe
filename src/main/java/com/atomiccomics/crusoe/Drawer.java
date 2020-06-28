@@ -1,12 +1,10 @@
 package com.atomiccomics.crusoe;
 
-import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.DestinationCleared;
 import com.atomiccomics.crusoe.player.DestinationUpdated;
 import com.atomiccomics.crusoe.world.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,51 +26,44 @@ public class Drawer {
     private final Set<World.Coordinates> walls = new CopyOnWriteArraySet<>();
     private final Map<World.Coordinates, Item> items = new ConcurrentHashMap<>();
 
-    private void handleWorldResized(final Event<WorldResized> event) {
-        this.dimensions = event.payload().dimensions();
+    @Handler(WorldResized.class)
+    public void handleWorldResized(final WorldResized event) {
+        this.dimensions = event.dimensions();
     }
 
-    private void handlePlayerMoved(final Event<PlayerMoved> event) {
-        this.player = event.payload().player();
+    @Handler(PlayerMoved.class)
+    public void handlePlayerMoved(final PlayerMoved event) {
+        this.player = event.player();
     }
 
-    private void handleWallBuilt(final Event<WallBuilt> event) {
-        this.walls.add(event.payload().location());
+    @Handler(WallBuilt.class)
+    public void handleWallBuilt(final WallBuilt event) {
+        this.walls.add(event.location());
     }
 
-    private void handleWallDestroyed(final Event<WallDestroyed> event) {
-        this.walls.remove(event.payload().location());
+    @Handler(WallDestroyed.class)
+    public void handleWallDestroyed(final WallDestroyed event) {
+        this.walls.remove(event.location());
     }
 
-    private void handleItemPlaced(final Event<ItemPlaced> event) {
-        this.items.put(event.payload().location(), event.payload().item());
+    @Handler(ItemPlaced.class)
+    public void handleItemPlaced(final ItemPlaced event) {
+        this.items.put(event.location(), event.item());
     }
 
-    private void handleItemRemoved(final Event<ItemRemoved> event) {
-        this.items.remove(event.payload().location());
+    @Handler(ItemRemoved.class)
+    public void handleItemRemoved(final ItemRemoved event) {
+        this.items.remove(event.location());
     }
 
-    private void handleDestinationUpdated(final Event<DestinationUpdated> event) {
-        this.destination = event.payload().coordinates();
+    @Handler(DestinationUpdated.class)
+    public void handleDestinationUpdated(final DestinationUpdated event) {
+        this.destination = event.coordinates();
     }
 
-    private void handleDestinationCleared(final Event<DestinationCleared> event) {
+    @Handler(DestinationCleared.class)
+    public void handleDestinationCleared(final DestinationCleared event) {
         this.destination = null;
-    }
-
-    public void process(final List<Event<?>> batch) {
-        for(final var event : batch) {
-            switch (event.name().value()) {
-                case "WorldResized" -> handleWorldResized((Event<WorldResized>) event);
-                case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
-                case "WallBuilt" -> handleWallBuilt((Event<WallBuilt>)event);
-                case "WallDestroyed" -> handleWallDestroyed((Event<WallDestroyed>)event);
-                case "ItemPlaced" -> handleItemPlaced((Event<ItemPlaced>)event);
-                case "ItemRemoved" -> handleItemRemoved((Event<ItemRemoved>)event);
-                case "DestinationUpdated" -> handleDestinationUpdated((Event<DestinationUpdated>)event);
-                case "DestinationCleared" -> handleDestinationCleared((Event<DestinationCleared>)event);
-            };
-        }
     }
 
     public Frame snapshot() {

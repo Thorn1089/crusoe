@@ -1,20 +1,16 @@
 package com.atomiccomics.crusoe.player;
 
-import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.Handler;
 import com.atomiccomics.crusoe.time.RepeatingTask;
 import com.atomiccomics.crusoe.time.Schedule;
 import com.atomiccomics.crusoe.time.Scheduler;
-import com.atomiccomics.crusoe.world.Grapher;
-import com.atomiccomics.crusoe.world.PlayerMoved;
-import com.atomiccomics.crusoe.world.World;
-import com.atomiccomics.crusoe.world.WorldClient;
+import com.atomiccomics.crusoe.world.*;
 
 import java.util.ArrayDeque;
-import java.util.List;
 
 public final class Navigator {
 
-    private final Grapher grapher = new Grapher();
+    private final Grapher grapher;
     private final WorldClient worldClient;
     private final PlayerClient playerClient;
     private final Scheduler scheduler;
@@ -22,22 +18,25 @@ public final class Navigator {
     private volatile World.Player player;
     private volatile Schedule runningTask;
 
-    public Navigator(final WorldClient worldClient, final PlayerClient playerClient, final Scheduler scheduler) {
+    public Navigator(final Grapher grapher, final WorldClient worldClient, final PlayerClient playerClient, final Scheduler scheduler) {
+        this.grapher = grapher;
         this.worldClient = worldClient;
         this.playerClient = playerClient;
         this.scheduler = scheduler;
     }
 
-    private void handlePlayerMoved(Event<PlayerMoved> event) {
-        this.player = event.payload().player();
+    @Handler(PlayerMoved.class)
+    public void handlePlayerMoved(final PlayerMoved event) {
+        this.player = event.player();
     }
 
-    private void handleDestinationUpdated(final Event<DestinationUpdated> event) {
+    @Handler(DestinationUpdated.class)
+    public void handleDestinationUpdated(final DestinationUpdated event) {
         if(player == null) {
             //Player hasn't spawned yet!
             return;
         }
-        final var path = new ArrayDeque<>(grapher.findPathBetween(player.position(), event.payload().coordinates()));
+        final var path = new ArrayDeque<>(grapher.findPathBetween(player.position(), event.coordinates()));
         final RepeatingTask task = () -> {
             final var step = path.remove();
             worldClient.update(w -> w.move(step));
@@ -51,20 +50,10 @@ public final class Navigator {
         //TODO Recalculate if path invalidated, e.g. world resized or wall built/destroyed
     }
 
-    private void handleDestinationCleared(final Event<DestinationCleared> event) {
+    @Handler(DestinationCleared.class)
+    public void handleDestinationCleared(final DestinationCleared event) {
         runningTask.cancel();
         runningTask = null;
-    }
-
-    public void process(final List<Event<?>> batch) {
-        grapher.process(batch);
-        for(final var event : batch) {
-            switch (event.name().value()) {
-                case "PlayerMoved" -> handlePlayerMoved((Event<PlayerMoved>)event);
-                case "DestinationUpdated" -> handleDestinationUpdated((Event<DestinationUpdated>)event);
-                case "DestinationCleared" -> handleDestinationCleared((Event<DestinationCleared>)event);
-            }
-        }
     }
 
     public boolean isReachable(final World.Coordinates destination) {
