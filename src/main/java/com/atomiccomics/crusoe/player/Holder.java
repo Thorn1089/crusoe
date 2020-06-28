@@ -1,8 +1,7 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.player;
 
+import com.atomiccomics.crusoe.Handler;
 import com.atomiccomics.crusoe.item.Item;
-import com.atomiccomics.crusoe.player.ItemDropped;
-import com.atomiccomics.crusoe.player.ItemPickedUp;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;

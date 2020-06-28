@@ -2,9 +2,14 @@ package com.atomiccomics.crusoe;
 
 import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
+import com.atomiccomics.crusoe.player.Holder;
 import com.atomiccomics.crusoe.player.Navigator;
 import com.atomiccomics.crusoe.player.Player;
 import com.atomiccomics.crusoe.time.ExecutorScheduler;
+import com.atomiccomics.crusoe.ui.AudioPlayer;
+import com.atomiccomics.crusoe.ui.Drawer;
+import com.atomiccomics.crusoe.ui.Projection;
+import com.atomiccomics.crusoe.ui.Renderer;
 import com.atomiccomics.crusoe.world.Grapher;
 import com.atomiccomics.crusoe.world.World;
 import io.reactivex.rxjava3.core.Observable;

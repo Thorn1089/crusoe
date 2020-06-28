@@ -1,4 +1,4 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.ui;
 
 import com.atomiccomics.crusoe.event.Event;
 import javafx.scene.media.AudioClip;

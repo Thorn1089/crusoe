@@ -1,5 +1,8 @@
-package com.atomiccomics.crusoe;
+package com.atomiccomics.crusoe.ui;
 
+import com.atomiccomics.crusoe.GamePaused;
+import com.atomiccomics.crusoe.GameResumed;
+import com.atomiccomics.crusoe.Handler;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.DestinationCleared;
 import com.atomiccomics.crusoe.player.DestinationUpdated;
