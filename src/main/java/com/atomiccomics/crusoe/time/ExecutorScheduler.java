@@ -27,7 +27,7 @@ public final class ExecutorScheduler implements Scheduler {
 
     public void start() {
         if (scheduledFuture != null) {
-            throw new IllegalStateException("Cannot start scheduler; already running!");
+            return;
         }
         scheduledFuture = pool.scheduleAtFixedRate(() -> {
             try {
@@ -45,8 +45,13 @@ public final class ExecutorScheduler implements Scheduler {
 
     public void stop() {
         if(scheduledFuture == null) {
-            throw new IllegalStateException("Cannot stop scheduler; has not been started!");
+            return;
         }
         scheduledFuture.cancel(true);
+        scheduledFuture = null;
+    }
+
+    public boolean isRunning() {
+        return scheduledFuture != null;
     }
 }

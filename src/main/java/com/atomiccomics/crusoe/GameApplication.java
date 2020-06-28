@@ -11,6 +11,8 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -31,6 +33,10 @@ import java.util.stream.IntStream;
 public class GameApplication extends Application {
 
     private static final System.Logger LOG = System.getLogger(GameApplication.class.getName());
+
+    public record ScreenSize(int width, int height) {
+
+    }
 
     public static void main(final String... args) {
         LOG.log(System.Logger.Level.INFO, "Starting JavaFX application");
@@ -53,7 +59,6 @@ public class GameApplication extends Application {
 
         final var scene = new Scene(new Pane(canvas), projection.scaleFromWorldSize(WIDTH), projection.scaleFromWorldSize(HEIGHT));
         stage.setScene(scene);
-        stage.show();
 
         final var game = new Game();
 
@@ -69,6 +74,7 @@ public class GameApplication extends Application {
 
         game.register(mover::process);
         game.register(builder::process);
+        game.register(audioPlayer::process);
         game.register(picker::process);
         game.register(drawer::process);
         game.register(holder::process);
@@ -159,7 +165,33 @@ public class GameApplication extends Application {
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
 
+        disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.SPACE).subscribe(x -> {
+            if(scheduler.isRunning()) {
+                scheduler.stop();
+            } else {
+                scheduler.start();
+            }
+        }));
+
+        final var screenWidth = Observable.<Number>create(emitter -> {
+            final ChangeListener<Number> listener = (obs, oldVal, newVal) -> emitter.onNext(newVal);
+            emitter.setCancellable(() -> stage.widthProperty().removeListener(listener));
+            stage.widthProperty().addListener(listener);
+        });
+        final var screenHeight = Observable.<Number>create(emitter -> {
+            final ChangeListener<Number> listener = (obs, oldVal, newVal) -> emitter.onNext(newVal);
+            emitter.setCancellable(() -> stage.heightProperty().removeListener(listener));
+            stage.heightProperty().addListener(listener);
+        });
+
+        disposable.add(Observable.combineLatest(screenWidth, screenHeight, (w, h) -> new ScreenSize(w.intValue(), h.intValue()))
+            .debounce(250, TimeUnit.MILLISECONDS)
+            .subscribe(s -> {
+                LOG.log(System.Logger.Level.DEBUG, "Screen resized: " + s);
+            }));
+
         scheduler.start();
+        stage.show();
     }
 
     @Override
