@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,7 +45,7 @@ public class GameApplication extends Application {
 
     private final CompositeDisposable disposable = new CompositeDisposable();
 
-    private final ExecutorScheduler scheduler = new ExecutorScheduler(Executors.newSingleThreadScheduledExecutor());
+    private final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -59,17 +60,18 @@ public class GameApplication extends Application {
         final var scene = new Scene(new Pane(canvas), projection.scaleFromWorldSize(WIDTH), projection.scaleFromWorldSize(HEIGHT));
         stage.setScene(scene);
 
+        final var random = new Random();
         final var engine = new Engine();
 
-        final var random = new Random();
-
-        final Grapher grapher = new Grapher();
+        final var scheduler = new ExecutorScheduler(pool);
+        final var grapher = new Grapher();
         final var builder = new Builder();
         final var audioPlayer = new AudioPlayer();
         final var drawer = new Drawer();
         final var holder = new Holder();
         final var picker = new Picker(engine::updatePlayer, engine::updateWorld);
         final var navigator = new Navigator(grapher, engine::updateWorld, engine::updatePlayer, scheduler);
+        final var runner = new Runner();
 
         engine.register(Component.wrap(grapher));
         engine.register(Component.wrap(builder));
@@ -78,6 +80,8 @@ public class GameApplication extends Application {
         engine.register(Component.wrap(drawer));
         engine.register(Component.wrap(holder));
         engine.register(Component.wrap(navigator));
+        engine.register(Component.wrap(runner));
+        engine.register(Component.wrap(scheduler));
 
         engine.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
@@ -165,11 +169,7 @@ public class GameApplication extends Application {
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.ESCAPE).subscribe(k -> Platform.exit()));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.SPACE).subscribe(x -> {
-            if(scheduler.isRunning()) {
-                scheduler.stop();
-            } else {
-                scheduler.start();
-            }
+            engine.updateGame(g -> runner.isGameRunning() ? g.pause() : g.resume());
         }));
 
         final var screenWidth = Observable.<Number>create(emitter -> {
@@ -189,13 +189,13 @@ public class GameApplication extends Application {
                 LOG.log(System.Logger.Level.DEBUG, "Screen resized: " + s);
             }));
 
-        scheduler.start();
+        engine.updateGame(Game::resume);
         stage.show();
     }
 
     @Override
     public void stop() throws Exception {
-        scheduler.stop();
+        pool.shutdownNow();
         disposable.dispose();
     }
 }

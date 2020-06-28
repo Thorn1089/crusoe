@@ -1,5 +1,9 @@
 package com.atomiccomics.crusoe.time;
 
+import com.atomiccomics.crusoe.GamePaused;
+import com.atomiccomics.crusoe.GameResumed;
+import com.atomiccomics.crusoe.Handler;
+
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,7 +29,8 @@ public final class ExecutorScheduler implements Scheduler {
         return () -> tasks.remove(task);
     }
 
-    public void start() {
+    @Handler(GameResumed.class)
+    public void resume(final GameResumed event) {
         if (scheduledFuture != null) {
             return;
         }
@@ -43,15 +48,12 @@ public final class ExecutorScheduler implements Scheduler {
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    public void stop() {
+    @Handler(GamePaused.class)
+    public void pause(final GamePaused event) {
         if(scheduledFuture == null) {
             return;
         }
-        scheduledFuture.cancel(true);
+        scheduledFuture.cancel(false);
         scheduledFuture = null;
-    }
-
-    public boolean isRunning() {
-        return scheduledFuture != null;
     }
 }
