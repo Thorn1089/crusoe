@@ -9,6 +9,7 @@ public final class Game {
 
     public static final class GameState {
         private boolean isRunning = false;
+        private boolean playerSelected = false;
 
         public GameState handleGamePaused(final Event<GamePaused> event) {
             isRunning = false;
@@ -20,11 +21,23 @@ public final class Game {
             return this;
         }
 
+        public GameState handlePlayerSelected(final Event<PlayerSelected> event) {
+            playerSelected = true;
+            return this;
+        }
+
+        public GameState handlePlayerDeselected(final Event<PlayerDeselected> event) {
+            playerSelected = false;
+            return this;
+        }
+
         public GameState process(final List<Event<?>> batch) {
             for(final var event : batch) {
                 switch(event.name().value()) {
                     case "GamePaused" -> handleGamePaused((Event<GamePaused>)event);
                     case "GameResumed" -> handleGameResumed((Event<GameResumed>)event);
+                    case "PlayerSelected" -> handlePlayerSelected((Event<PlayerSelected>)event);
+                    case "PlayerDeselected" -> handlePlayerDeselected((Event<PlayerDeselected>)event);
                 }
             }
             return this;
@@ -32,9 +45,11 @@ public final class Game {
     }
 
     private final boolean isRunning;
+    private final boolean playerSelected;
 
     public Game(final GameState state) {
         this.isRunning = state.isRunning;
+        this.playerSelected = state.playerSelected;
     }
 
     public List<Event<?>> pause() {
@@ -49,6 +64,20 @@ public final class Game {
             return Collections.emptyList();
         }
         return Collections.singletonList(Event.create(new GameResumed()));
+    }
+
+    public List<Event<?>> selectPlayer() {
+        if(playerSelected) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(Event.create(new PlayerSelected()));
+    }
+
+    public List<Event<?>> deselectPlayer() {
+        if(!playerSelected) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(Event.create(new PlayerDeselected()));
     }
 
 }

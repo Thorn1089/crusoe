@@ -1,8 +1,6 @@
 package com.atomiccomics.crusoe.ui;
 
-import com.atomiccomics.crusoe.GamePaused;
-import com.atomiccomics.crusoe.GameResumed;
-import com.atomiccomics.crusoe.Handler;
+import com.atomiccomics.crusoe.*;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.DestinationCleared;
 import com.atomiccomics.crusoe.player.DestinationUpdated;
@@ -20,7 +18,8 @@ public class Drawer {
                         Set<World.Coordinates> walls,
                         Map<World.Coordinates, Item> items,
                         World.Coordinates destination,
-                        boolean isRunning) {
+                        boolean isRunning,
+                        boolean isPlayerSelected) {
 
     }
 
@@ -30,6 +29,7 @@ public class Drawer {
     private final Set<World.Coordinates> walls = new CopyOnWriteArraySet<>();
     private final Map<World.Coordinates, Item> items = new ConcurrentHashMap<>();
     private volatile boolean isRunning = false;
+    private volatile boolean isPlayerSelected = false;
 
     @Handler(WorldResized.class)
     public void handleWorldResized(final WorldResized event) {
@@ -81,8 +81,18 @@ public class Drawer {
         isRunning = true;
     }
 
+    @Handler(PlayerSelected.class)
+    public void handlePlayerSelected(final PlayerSelected event) {
+        isPlayerSelected = true;
+    }
+
+    @Handler(PlayerDeselected.class)
+    public void handlePlayerDeselected(final PlayerDeselected event) {
+        isPlayerSelected = false;
+    }
+
     public Frame snapshot() {
-        return new Frame(dimensions, player, Set.copyOf(walls), Map.copyOf(items), destination, isRunning);
+        return new Frame(dimensions, player, Set.copyOf(walls), Map.copyOf(items), destination, isRunning, isPlayerSelected);
     }
     
 }

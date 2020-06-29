@@ -83,6 +83,14 @@ public class Renderer {
                                 DoubleStream.of(triangle.xCoords()).map(d -> projection.scaleFromWorldX(xOrigin + d)).toArray(),
                                 DoubleStream.of(triangle.yCoords()).map(d -> projection.scaleFromWorldY(yOrigin - d)).toArray(),
                                 3);
+                        if(frame.isPlayerSelected()) {
+                            graphics.setStroke(Color.rgb(127, 0, 127));
+                            graphics.setLineWidth(2.0);
+                            graphics.strokeRect(projection.scaleFromWorldX(i) + 1.0,
+                                    projection.scaleFromWorldY(j) + 1.0,
+                                    projection.scaleFromWorldSize(1) - 2.0,
+                                    projection.scaleFromWorldSize(1) - 2.0);
+                        }
                     } else if(frame.items().containsKey(currentCoordinates)) {
                         //TODO Decide what polygon to draw based on item type
                         graphics.setFill(Color.rgb(0, 0, 255));

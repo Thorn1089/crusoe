@@ -9,6 +9,7 @@ import com.atomiccomics.crusoe.ui.Drawer;
 import com.atomiccomics.crusoe.ui.Projection;
 import com.atomiccomics.crusoe.ui.Renderer;
 import com.atomiccomics.crusoe.world.Grapher;
+import com.atomiccomics.crusoe.world.PlayerMoved;
 import com.atomiccomics.crusoe.world.World;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -28,6 +29,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +44,7 @@ public final class GameController {
     private static final int WIDTH = 24;
     private static final int HEIGHT = 24;
 
-    public class Goals {
+    private final class Goals {
         private final SimpleStringProperty description = new SimpleStringProperty();
         private final SimpleBooleanProperty hasGoal = new SimpleBooleanProperty();
 
@@ -60,6 +62,29 @@ public final class GameController {
                 hasGoal.set(false);
                 description.set("");
             });
+        }
+    }
+
+    private final class Location {
+        private volatile World.Coordinates player;
+
+        @Handler(PlayerMoved.class)
+        public void handlePlayerMoved(final PlayerMoved event) {
+            this.player = event.player().position();
+        }
+    }
+
+    private final class Selector {
+        private volatile boolean isPlayerSelected;
+
+        @Handler(PlayerSelected.class)
+        public void handlePlayerSelected(final PlayerSelected event) {
+            isPlayerSelected = true;
+        }
+
+        @Handler(PlayerDeselected.class)
+        public void handlePlayerDeselected(final PlayerDeselected event) {
+            isPlayerSelected = false;
         }
     }
 
@@ -99,6 +124,9 @@ public final class GameController {
         goalDescription.textProperty().bind(goals.description);
         cancelGoal.disableProperty().bind(goals.hasGoal.not());
 
+        final var location = new Location();
+        final var selector = new Selector();
+
         engine.register(Component.wrap(grapher));
         engine.register(Component.wrap(builder));
         engine.register(audioPlayer::process);
@@ -109,6 +137,8 @@ public final class GameController {
         engine.register(Component.wrap(runner));
         engine.register(Component.wrap(scheduler));
         engine.register(Component.wrap(goals));
+        engine.register(Component.wrap(location));
+        engine.register(Component.wrap(selector));
 
         engine.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
@@ -156,8 +186,15 @@ public final class GameController {
             cancelGoal.addEventHandler(ActionEvent.ACTION, listener);
         });
 
+        disposable.add(mouseClicked
+                .filter(e -> e.getButton() == MouseButton.PRIMARY)
+                .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
+                .map(c -> Objects.equals(c, location.player))
+                .subscribe(b -> engine.updateGame(g -> b ? g.selectPlayer() : g.deselectPlayer())));
+
         final Observable<Function<Player, List<Event<?>>>> updateFromPlayerNavigate = mouseClicked
                 .filter(e -> e.getButton() == MouseButton.SECONDARY)
+                .filter(e -> selector.isPlayerSelected)
                 .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
                 .filter(navigator::isReachable)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
