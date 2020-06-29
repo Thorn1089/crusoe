@@ -1,3 +1,5 @@
+# World
+
 The World aggregate is responsible for the physical placement of other entities.
 This includes the player, walls, and items.
 
