@@ -1,5 +1,9 @@
 package com.atomiccomics.crusoe;
 
+import com.google.inject.Guice;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import javafx.application.Application;
@@ -13,9 +17,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 public class GameApplication extends Application {
 
@@ -31,16 +37,52 @@ public class GameApplication extends Application {
     }
 
     private final CompositeDisposable disposable = new CompositeDisposable();
-
-    private final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
-
-    private final GameController controller = new GameController(pool);
+    private final Set<Runnable> tearDownHooks = new HashSet<>();
 
     @Override
     public void start(final Stage stage) throws Exception {
+        final var injector = Guice.createInjector(new MainModule());
+
+        final var engine = injector.getInstance(Engine.class);
+
+        try(final var result = new ClassGraph().enableAllInfo().acceptPackages("com.atomiccomics.crusoe").scan()) {
+            final ClassInfoList gameEngineComponents = result.getClassesWithAnnotation(RegisteredComponent.class.getName());
+            for(final ClassInfo componentInfo : gameEngineComponents) {
+                LOG.log(System.Logger.Level.TRACE, "Handler class: " + componentInfo);
+                if(componentInfo.implementsInterface(Component.class.getName())) {
+                    final var component = (Component)injector.getInstance(componentInfo.loadClass());
+                    engine.register(component);
+                } else {
+                    final var component = Component.wrap(injector.getInstance(componentInfo.loadClass()));
+                    engine.register(component);
+                }
+            }
+
+            final ClassInfoList tearDownComponents = result.getClassesWithMethodAnnotation(Cleanup.class.getName());
+            for(final ClassInfo tearDownInfo : tearDownComponents) {
+                LOG.log(System.Logger.Level.TRACE, "Class with cleanup methods: " + tearDownInfo);
+                final var type = tearDownInfo.loadClass();
+                final var component = injector.getInstance(type);
+                Stream.of(type.getMethods())
+                        .filter(m -> m.isAnnotationPresent(Cleanup.class))
+                        .forEach(m -> {
+                            final Runnable hook = () -> {
+                                try {
+                                    m.invoke(component);
+                                } catch (IllegalAccessException | InvocationTargetException e) {
+                                    LOG.log(System.Logger.Level.ERROR, "Unable to invoke cleanup hook", e);
+                                }
+                            };
+                            tearDownHooks.add(hook);
+                        });
+            }
+        }
+
+
         LOG.log(System.Logger.Level.DEBUG, "Displaying initial stage");
 
         final var loader = new FXMLLoader();
+        final var controller = injector.getInstance(GameController.class);
         loader.setController(controller);
         final Pane parent = loader.load(GameApplication.class.getResourceAsStream("/Main.fxml"));
 
@@ -78,8 +120,7 @@ public class GameApplication extends Application {
 
     @Override
     public void stop() throws Exception {
-        controller.stop();
-        pool.shutdownNow();
         disposable.dispose();
+        tearDownHooks.forEach(Runnable::run);
     }
 }

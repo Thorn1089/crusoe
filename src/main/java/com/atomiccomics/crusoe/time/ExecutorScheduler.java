@@ -3,6 +3,9 @@ package com.atomiccomics.crusoe.time;
 import com.atomiccomics.crusoe.GamePaused;
 import com.atomiccomics.crusoe.GameResumed;
 import com.atomiccomics.crusoe.Handler;
+import com.atomiccomics.crusoe.RegisteredComponent;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -10,6 +13,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+@Singleton
+@RegisteredComponent
 public final class ExecutorScheduler implements Scheduler {
 
     private static final System.Logger LOG = System.getLogger(ExecutorScheduler.class.getName());
@@ -19,6 +24,7 @@ public final class ExecutorScheduler implements Scheduler {
 
     private volatile ScheduledFuture<?> scheduledFuture;
 
+    @Inject
     public ExecutorScheduler(final ScheduledExecutorService pool) {
         this.pool = pool;
     }

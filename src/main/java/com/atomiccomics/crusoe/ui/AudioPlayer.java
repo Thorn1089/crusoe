@@ -1,6 +1,9 @@
 package com.atomiccomics.crusoe.ui;
 
+import com.atomiccomics.crusoe.Component;
+import com.atomiccomics.crusoe.RegisteredComponent;
 import com.atomiccomics.crusoe.event.Event;
+import com.google.inject.Singleton;
 import javafx.scene.media.AudioClip;
 
 import java.nio.file.Paths;
@@ -10,7 +13,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public final class AudioPlayer {
+@Singleton
+@RegisteredComponent
+public final class AudioPlayer implements Component {
 
     private static final Function<String, String> AUDIO_CLIP_RESOLVER = filename -> "file://" + Paths.get(".", "media", filename).toAbsolutePath().toString();
 
@@ -22,6 +27,7 @@ public final class AudioPlayer {
         clip.play();
     }
 
+    @Override
     public void process(final List<Event<?>> batch) {
         for(final var event : batch) {
             Optional.ofNullable(switch(event.name().value()) {

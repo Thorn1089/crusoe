@@ -1,13 +1,18 @@
 package com.atomiccomics.crusoe.player;
 
 import com.atomiccomics.crusoe.Handler;
+import com.atomiccomics.crusoe.RegisteredComponent;
 import com.atomiccomics.crusoe.time.RepeatingTask;
 import com.atomiccomics.crusoe.time.Schedule;
 import com.atomiccomics.crusoe.time.Scheduler;
 import com.atomiccomics.crusoe.world.*;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import java.util.ArrayDeque;
 
+@Singleton
+@RegisteredComponent
 public final class Navigator {
 
     private final Grapher grapher;
@@ -18,6 +23,7 @@ public final class Navigator {
     private volatile World.Player player;
     private volatile Schedule runningTask;
 
+    @Inject
     public Navigator(final Grapher grapher, final WorldClient worldClient, final PlayerClient playerClient, final Scheduler scheduler) {
         this.grapher = grapher;
         this.worldClient = worldClient;

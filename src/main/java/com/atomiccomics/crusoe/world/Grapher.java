@@ -1,10 +1,14 @@
 package com.atomiccomics.crusoe.world;
 
 import com.atomiccomics.crusoe.Handler;
+import com.atomiccomics.crusoe.RegisteredComponent;
+import com.google.inject.Singleton;
 
 import java.util.*;
 import java.util.function.BiFunction;
 
+@Singleton
+@RegisteredComponent
 public final class Grapher {
 
     private volatile World.Dimensions dimensions;
@@ -22,13 +26,13 @@ public final class Grapher {
     }
 
     @Handler(WallBuilt.class)
-    private void handleWallBuilt(final WallBuilt event) {
+    public void handleWallBuilt(final WallBuilt event) {
         obstacles.add(event.location());
         isDirty = true;
     }
 
     @Handler(WallDestroyed.class)
-    private void handleWallDestroyed(final WallDestroyed event) {
+    public void handleWallDestroyed(final WallDestroyed event) {
         obstacles.remove(event.location());
         isDirty = true;
     }
@@ -63,7 +67,6 @@ public final class Grapher {
                 if(i > 0 && j < dimensions.height() - 1) {
                     Optional.ofNullable(matrix[i-1][j+1]).ifPresent(n -> builder.connect(n, node, 1));
                 }
-                //TODO Connect nodes diagonally
             }
         }
 

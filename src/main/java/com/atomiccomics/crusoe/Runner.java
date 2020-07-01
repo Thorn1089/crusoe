@@ -1,5 +1,9 @@
 package com.atomiccomics.crusoe;
 
+import com.google.inject.Singleton;
+
+@Singleton
+@RegisteredComponent
 public final class Runner {
 
     private volatile boolean isRunning = false;

@@ -11,6 +11,7 @@ import com.atomiccomics.crusoe.ui.Renderer;
 import com.atomiccomics.crusoe.world.Grapher;
 import com.atomiccomics.crusoe.world.PlayerMoved;
 import com.atomiccomics.crusoe.world.World;
+import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import javafx.application.Platform;
@@ -89,7 +90,10 @@ public final class GameController {
     }
 
     private final CompositeDisposable disposable = new CompositeDisposable();
-    private final ScheduledExecutorService pool;
+    private final Engine engine;
+    private final Navigator navigator;
+    private final Drawer drawer;
+    private final Runner runner;
 
     @FXML private Canvas viewport;
 
@@ -97,8 +101,15 @@ public final class GameController {
 
     @FXML private Button cancelGoal;
 
-    public GameController(final ScheduledExecutorService pool) {
-        this.pool = pool;
+    @Inject
+    public GameController(final Engine engine,
+                          final Navigator navigator,
+                          final Drawer drawer,
+                          final Runner runner) {
+        this.engine = engine;
+        this.navigator = navigator;
+        this.drawer = drawer;
+        this.runner = runner;
     }
 
     @FXML private void initialize() {
@@ -107,18 +118,7 @@ public final class GameController {
 
     public void start() {
         final var random = new Random();
-        final var engine = new Engine();
         final var projection = new Projection(new World.Dimensions(WIDTH, HEIGHT), 32);
-
-        final var scheduler = new ExecutorScheduler(pool);
-        final var grapher = new Grapher();
-        final var builder = new Builder();
-        final var audioPlayer = new AudioPlayer();
-        final var drawer = new Drawer();
-        final var holder = new Holder();
-        final var picker = new Picker(engine::updatePlayer, engine::updateWorld);
-        final var navigator = new Navigator(grapher, engine::updateWorld, engine::updatePlayer, scheduler);
-        final var runner = new Runner();
 
         final var goals = new Goals();
         goalDescription.textProperty().bind(goals.description);
@@ -127,15 +127,6 @@ public final class GameController {
         final var location = new Location();
         final var selector = new Selector();
 
-        engine.register(Component.wrap(grapher));
-        engine.register(Component.wrap(builder));
-        engine.register(audioPlayer::process);
-        engine.register(Component.wrap(picker));
-        engine.register(Component.wrap(drawer));
-        engine.register(Component.wrap(holder));
-        engine.register(Component.wrap(navigator));
-        engine.register(Component.wrap(runner));
-        engine.register(Component.wrap(scheduler));
         engine.register(Component.wrap(goals));
         engine.register(Component.wrap(location));
         engine.register(Component.wrap(selector));
@@ -216,6 +207,7 @@ public final class GameController {
         engine.updateGame(Game::resume);
     }
 
+    @Cleanup
     public void stop() {
         disposable.dispose();
     }

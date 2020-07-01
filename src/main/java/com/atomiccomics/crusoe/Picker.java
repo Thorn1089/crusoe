@@ -4,11 +4,15 @@ import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.ItemDropped;
 import com.atomiccomics.crusoe.player.PlayerClient;
 import com.atomiccomics.crusoe.world.*;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
+@RegisteredComponent
 public final class Picker {
 
     private final PlayerClient playerClient;
@@ -17,6 +21,7 @@ public final class Picker {
     private final Map<World.Coordinates, Item> items = new ConcurrentHashMap<>();
     private volatile World.Coordinates player;
 
+    @Inject
     public Picker(final PlayerClient playerClient, final WorldClient worldClient) {
         this.playerClient = playerClient;
         this.worldClient = worldClient;

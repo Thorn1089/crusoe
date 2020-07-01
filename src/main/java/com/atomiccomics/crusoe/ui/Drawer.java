@@ -5,12 +5,15 @@ import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.DestinationCleared;
 import com.atomiccomics.crusoe.player.DestinationUpdated;
 import com.atomiccomics.crusoe.world.*;
+import com.google.inject.Singleton;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+@Singleton
+@RegisteredComponent
 public class Drawer {
 
     public record Frame(World.Dimensions dimensions,

@@ -4,10 +4,13 @@ import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.ItemDropped;
 import com.atomiccomics.crusoe.player.ItemPickedUp;
 import com.atomiccomics.crusoe.world.*;
+import com.google.inject.Singleton;
 
 import java.util.HashSet;
 import java.util.Set;
 
+@Singleton
+@RegisteredComponent
 public final class Builder {
 
     private volatile World.Dimensions dimensions;

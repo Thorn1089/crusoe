@@ -1,11 +1,15 @@
 package com.atomiccomics.crusoe.player;
 
 import com.atomiccomics.crusoe.Handler;
+import com.atomiccomics.crusoe.RegisteredComponent;
 import com.atomiccomics.crusoe.item.Item;
+import com.google.inject.Singleton;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+@Singleton
+@RegisteredComponent
 public final class Holder {
 
     private final Set<Item> inventory = new CopyOnWriteArraySet<>();
