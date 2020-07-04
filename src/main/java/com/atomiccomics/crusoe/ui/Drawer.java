@@ -7,8 +7,7 @@ import com.atomiccomics.crusoe.player.DestinationUpdated;
 import com.atomiccomics.crusoe.world.*;
 import com.google.inject.Singleton;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -17,12 +16,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public class Drawer {
 
     public record Frame(World.Dimensions dimensions,
-                        World.Player player,
-                        Set<World.Coordinates> walls,
-                        Map<World.Coordinates, Item> items,
-                        World.Coordinates destination,
                         boolean isRunning,
-                        boolean isPlayerSelected) {
+                        Collection<Sprite> sprites) {
 
     }
 
@@ -95,7 +90,20 @@ public class Drawer {
     }
 
     public Frame snapshot() {
-        return new Frame(dimensions, player, Set.copyOf(walls), Map.copyOf(items), destination, isRunning, isPlayerSelected);
+        final List<Sprite> sprites = new LinkedList<>();
+        walls.stream()
+                .map(WallSprite::new)
+                .forEach(sprites::add);
+        Optional.ofNullable(destination).map(DestinationSprite::new).ifPresent(sprites::add);
+
+        sprites.add(new PlayerSprite(player.position(), player.orientation(), isPlayerSelected));
+
+        items.entrySet()
+                .stream()
+                .map(e -> new ItemSprite(e.getKey(), e.getValue()))
+                .forEach(sprites::add);
+
+        return new Frame(dimensions, isRunning, sprites);
     }
     
 }
