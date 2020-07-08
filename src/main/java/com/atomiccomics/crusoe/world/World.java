@@ -169,6 +169,7 @@ public final class World {
         private volatile Dimensions dimensions;
         private volatile Player player;
         private final Set<Coordinates> walls = new CopyOnWriteArraySet<>();
+        private final Set<Coordinates> blueprints = new CopyOnWriteArraySet<>();
         private final Map<Coordinates, Item> items = new ConcurrentHashMap<>();
 
         public WorldState handleWorldResized(final Event<WorldResized> event) {
@@ -191,6 +192,11 @@ public final class World {
             return this;
         }
 
+        public WorldState handleWallBlueprintPlaced(final Event<WallBlueprintPlaced> event) {
+            this.blueprints.add(event.payload().location());
+            return this;
+        }
+
         public WorldState handleItemPlaced(final Event<ItemPlaced> event) {
             this.items.put(event.payload().location(), event.payload().item());
             return this;
@@ -209,6 +215,7 @@ public final class World {
                     case "PlayerMoved" -> updatedState.handlePlayerMoved((Event<PlayerMoved>)event);
                     case "WallBuilt" -> updatedState.handleWallBuilt((Event<WallBuilt>)event);
                     case "WallDestroyed" -> updatedState.handleWallDestroyed((Event<WallDestroyed>)event);
+                    case "WallBlueprintPlaced" -> updatedState.handleWallBlueprintPlaced((Event<WallBlueprintPlaced>)event);
                     case "ItemPlaced" -> updatedState.handleItemPlaced((Event<ItemPlaced>)event);
                     case "ItemRemoved" -> updatedState.handleItemRemoved((Event<ItemRemoved>)event);
                     default -> updatedState;
@@ -229,6 +236,10 @@ public final class World {
             return new HashSet<>(walls);
         }
 
+        public Set<Coordinates> blueprints() {
+            return new HashSet<>(blueprints);
+        }
+
         public Map<Coordinates, Item> items() {
             return new HashMap<>(items);
         }
@@ -237,12 +248,14 @@ public final class World {
     private final Dimensions dimensions;
     private final Player player;
     private final Set<Coordinates> walls;
+    private final Set<Coordinates> blueprints;
     private final Map<Coordinates, Item> items;
 
     public World(final WorldState state) {
         this.dimensions = state.dimensions();
         this.player = state.player();
         this.walls = state.walls();
+        this.blueprints = state.blueprints();
         this.items = state.items();
     }
 
@@ -355,6 +368,18 @@ public final class World {
         return Collections.singletonList(Event.create(new WallDestroyed(location)));
     }
 
+    public List<Event<?>> placeWallBlueprintAt(final Coordinates location) {
+        assertDimensionsProvided();
+        assertDimensionsContainLocation(location);
+        assertLocationEmpty(location);
+
+        if(blueprints.contains(location)) {
+            return Collections.emptyList();
+        }
+
+        return Collections.singletonList(Event.create(new WallBlueprintPlaced(location)));
+    }
+
     private void assertDimensionsProvided() {
         if(dimensions == null) {
             throw new IllegalStateException("Can't build a wall before the world has been sized!");
@@ -383,6 +408,12 @@ public final class World {
         if(items.containsKey(location)) {
             throw new IllegalStateException("Can't build a wall on top of an item!");
         }
+    }
+
+    private void assertLocationEmpty(final Coordinates location) {
+        assertWallNotAtLocation(location);
+        assertItemNotAtLocation(location);
+        assertPlayerNotAtLocation(location);
     }
 
     private void assertPlayerSpawned() {

@@ -179,9 +179,9 @@ public final class GameController {
                 .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.COMMAND && !Objects.equals(c, location.player))
                 .map(c -> Game::deselectPlayer);
 
-        disposable.add(leftClicksOn
+        final Observable<Function<World, List<Event<?>>>> updateFromLeftClickWhileBuildMode = leftClicksOn
                 .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD && builder.isBuildable(c))
-                .subscribe(c -> LOG.log(System.Logger.Level.DEBUG, "Building at " + c)));
+                .map(c -> w -> w.placeWallBlueprintAt(c));
 
         final Observable<Function<Game, List<Event<?>>>> updateFromRightClickWhileBuildMode = rightClicks
                 .filter(e -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD)
@@ -209,6 +209,10 @@ public final class GameController {
                 updateFromRightClickWhileBuildMode)
                 .filter(f -> runner.isGameRunning())
                 .subscribe(engine::updateGame));
+
+        disposable.add(updateFromLeftClickWhileBuildMode
+                .filter(f -> runner.isGameRunning())
+                .subscribe(engine::updateWorld));
 
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.SPACE).subscribe(x -> {
             engine.updateGame(g -> runner.isGameRunning() ? g.pause() : g.resume());

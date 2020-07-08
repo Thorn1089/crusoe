@@ -25,6 +25,7 @@ public class Drawer {
     private volatile World.Player player;
     private volatile World.Coordinates destination;
     private final Set<World.Coordinates> walls = new CopyOnWriteArraySet<>();
+    private final Set<World.Coordinates> blueprints = new CopyOnWriteArraySet<>();
     private final Map<World.Coordinates, Item> items = new ConcurrentHashMap<>();
     private volatile boolean isRunning = false;
     private volatile boolean isPlayerSelected = false;
@@ -47,6 +48,11 @@ public class Drawer {
     @Handler(WallDestroyed.class)
     public void handleWallDestroyed(final WallDestroyed event) {
         this.walls.remove(event.location());
+    }
+
+    @Handler(WallBlueprintPlaced.class)
+    public void handleWallBlueprintPlaced(final WallBlueprintPlaced event) {
+        this.blueprints.add(event.location());
     }
 
     @Handler(ItemPlaced.class)
@@ -93,6 +99,9 @@ public class Drawer {
         final List<Sprite> sprites = new LinkedList<>();
         walls.stream()
                 .map(WallSprite::new)
+                .forEach(sprites::add);
+        blueprints.stream()
+                .map(BlueprintSprite::new)
                 .forEach(sprites::add);
         Optional.ofNullable(destination).map(DestinationSprite::new).ifPresent(sprites::add);
 
