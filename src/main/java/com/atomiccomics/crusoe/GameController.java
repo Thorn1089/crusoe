@@ -4,10 +4,7 @@ import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.*;
 import com.atomiccomics.crusoe.time.ExecutorScheduler;
-import com.atomiccomics.crusoe.ui.AudioPlayer;
-import com.atomiccomics.crusoe.ui.Drawer;
-import com.atomiccomics.crusoe.ui.Projection;
-import com.atomiccomics.crusoe.ui.Renderer;
+import com.atomiccomics.crusoe.ui.*;
 import com.atomiccomics.crusoe.world.Grapher;
 import com.atomiccomics.crusoe.world.PlayerMoved;
 import com.atomiccomics.crusoe.world.World;
@@ -75,25 +72,12 @@ public final class GameController {
         }
     }
 
-    private final class Selector {
-        private volatile boolean isPlayerSelected;
-
-        @Handler(PlayerSelected.class)
-        public void handlePlayerSelected(final PlayerSelected event) {
-            isPlayerSelected = true;
-        }
-
-        @Handler(PlayerDeselected.class)
-        public void handlePlayerDeselected(final PlayerDeselected event) {
-            isPlayerSelected = false;
-        }
-    }
-
     private final CompositeDisposable disposable = new CompositeDisposable();
     private final Engine engine;
     private final Navigator navigator;
     private final Drawer drawer;
     private final Runner runner;
+    private final ModeDetector modeDetector;
 
     @FXML private Canvas viewport;
 
@@ -101,15 +85,19 @@ public final class GameController {
 
     @FXML private Button cancelGoal;
 
+    @FXML private Button makeWall;
+
     @Inject
     public GameController(final Engine engine,
                           final Navigator navigator,
                           final Drawer drawer,
-                          final Runner runner) {
+                          final Runner runner,
+                          final ModeDetector modeDetector) {
         this.engine = engine;
         this.navigator = navigator;
         this.drawer = drawer;
         this.runner = runner;
+        this.modeDetector = modeDetector;
     }
 
     @FXML private void initialize() {
@@ -125,11 +113,9 @@ public final class GameController {
         cancelGoal.disableProperty().bind(goals.hasGoal.not());
 
         final var location = new Location();
-        final var selector = new Selector();
 
         engine.register(Component.wrap(goals));
         engine.register(Component.wrap(location));
-        engine.register(Component.wrap(selector));
 
         engine.updateWorld(w -> w.resize(new World.Dimensions(WIDTH, HEIGHT)));
 
@@ -177,15 +163,29 @@ public final class GameController {
             cancelGoal.addEventHandler(ActionEvent.ACTION, listener);
         });
 
-        disposable.add(mouseClicked
-                .filter(e -> e.getButton() == MouseButton.PRIMARY)
-                .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
-                .map(c -> Objects.equals(c, location.player))
-                .subscribe(b -> engine.updateGame(g -> b ? g.selectPlayer() : g.deselectPlayer())));
+        final var leftClicks = mouseClicked.filter(e -> e.getButton() == MouseButton.PRIMARY);
+        final var rightClicks = mouseClicked.filter(e -> e.getButton() == MouseButton.SECONDARY);
 
-        final Observable<Function<Player, List<Event<?>>>> updateFromPlayerNavigate = mouseClicked
-                .filter(e -> e.getButton() == MouseButton.SECONDARY)
-                .filter(e -> selector.isPlayerSelected)
+        final var leftClicksOn = leftClicks.map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())));
+
+        final Observable<Function<Game, List<Event<?>>>> updateFromLeftClickWhileNoMode = leftClicksOn
+                .filter(c -> modeDetector.currentMode() == null && Objects.equals(c, location.player))
+                .map(c -> Game::selectPlayer);
+
+        final Observable<Function<Game, List<Event<?>>>> updateFromLeftClickWhileCommandMode = leftClicksOn
+                .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.COMMAND && !Objects.equals(c, location.player))
+                .map(c -> Game::deselectPlayer);
+
+        disposable.add(leftClicksOn
+                .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD)
+                .subscribe(c -> LOG.log(System.Logger.Level.DEBUG, "Building at " + c)));
+
+        final Observable<Function<Game, List<Event<?>>>> updateFromRightClickWhileBuildMode = rightClicks
+                .filter(e -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD)
+                .map(e -> Game::deactivateWallBlueprint);
+
+        final Observable<Function<Player, List<Event<?>>>> updateFromPlayerNavigate = rightClicks
+                .filter(e -> modeDetector.currentMode() == ModeDetector.InputMode.COMMAND)
                 .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
                 .filter(navigator::isReachable)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
@@ -200,9 +200,22 @@ public final class GameController {
                 .filter(f -> runner.isGameRunning())
                 .subscribe(engine::updatePlayer));
 
+        disposable.add(Observable.merge(
+                updateFromLeftClickWhileCommandMode,
+                updateFromLeftClickWhileNoMode,
+                updateFromRightClickWhileBuildMode)
+                .filter(f -> runner.isGameRunning())
+                .subscribe(engine::updateGame));
+
         disposable.add(keysPressed.map(KeyEvent::getCode).filter(c -> c == KeyCode.SPACE).subscribe(x -> {
             engine.updateGame(g -> runner.isGameRunning() ? g.pause() : g.resume());
         }));
+
+        disposable.add(Observable.create(emitter -> {
+            final EventHandler<ActionEvent> listener = emitter::onNext;
+            emitter.setCancellable(() -> makeWall.removeEventHandler(ActionEvent.ACTION, listener));
+            makeWall.addEventHandler(ActionEvent.ACTION, listener);
+        }).subscribe(e -> engine.updateGame(Game::activateWallBlueprint)));
 
         engine.updateGame(Game::resume);
     }
