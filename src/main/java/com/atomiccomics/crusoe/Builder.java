@@ -7,6 +7,7 @@ import com.atomiccomics.crusoe.world.*;
 import com.google.inject.Singleton;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Singleton
@@ -50,6 +51,16 @@ public final class Builder {
         if(event.item() == Item.PICKAXE) {
             hasPickaxe = false;
         }
+    }
+
+    public boolean isBuildable(final World.Coordinates location) {
+        if(dimensions == null) {
+            return false;
+        }
+
+        return dimensions.contains(location) &&
+                !walls.contains(location) &&
+                !Objects.equals(player.position(), location);
     }
 
     public boolean canBuildWherePlayerLooking() {

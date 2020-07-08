@@ -78,6 +78,7 @@ public final class GameController {
     private final Drawer drawer;
     private final Runner runner;
     private final ModeDetector modeDetector;
+    private final Builder builder;
 
     @FXML private Canvas viewport;
 
@@ -92,12 +93,14 @@ public final class GameController {
                           final Navigator navigator,
                           final Drawer drawer,
                           final Runner runner,
-                          final ModeDetector modeDetector) {
+                          final ModeDetector modeDetector,
+                          final Builder builder) {
         this.engine = engine;
         this.navigator = navigator;
         this.drawer = drawer;
         this.runner = runner;
         this.modeDetector = modeDetector;
+        this.builder = builder;
     }
 
     @FXML private void initialize() {
@@ -177,7 +180,7 @@ public final class GameController {
                 .map(c -> Game::deselectPlayer);
 
         disposable.add(leftClicksOn
-                .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD)
+                .filter(c -> modeDetector.currentMode() == ModeDetector.InputMode.BUILD && builder.isBuildable(c))
                 .subscribe(c -> LOG.log(System.Logger.Level.DEBUG, "Building at " + c)));
 
         final Observable<Function<Game, List<Event<?>>>> updateFromRightClickWhileBuildMode = rightClicks
