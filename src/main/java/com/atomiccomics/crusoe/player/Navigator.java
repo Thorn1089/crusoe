@@ -2,6 +2,7 @@ package com.atomiccomics.crusoe.player;
 
 import com.atomiccomics.crusoe.Handler;
 import com.atomiccomics.crusoe.RegisteredComponent;
+import com.atomiccomics.crusoe.graph.ImpossiblePathException;
 import com.atomiccomics.crusoe.time.RepeatingTask;
 import com.atomiccomics.crusoe.time.Schedule;
 import com.atomiccomics.crusoe.time.Scheduler;
@@ -42,18 +43,22 @@ public final class Navigator {
             //Player hasn't spawned yet!
             return;
         }
-        final var path = new ArrayDeque<>(grapher.findPathBetween(player.position(), event.coordinates()));
-        final RepeatingTask task = () -> {
-            final var step = path.remove();
-            worldClient.update(w -> w.move(step));
-            if(path.isEmpty()) {
-                playerClient.update(Player::clearDestination);
-            }
-            return path.isEmpty();
-        };
-        runningTask = scheduler.scheduleRepeatingTask(task);
-
-        //TODO Recalculate if path invalidated, e.g. world resized or wall built/destroyed
+        try {
+            final var path = new ArrayDeque<>(grapher.findPathBetween(player.position(), event.coordinates()));
+            final RepeatingTask task = () -> {
+                final var step = path.remove();
+                worldClient.update(w -> w.move(step));
+                if(path.isEmpty()) {
+                    playerClient.update(Player::clearDestination);
+                }
+                return path.isEmpty();
+            };
+            runningTask = scheduler.scheduleRepeatingTask(task);
+            //TODO Recalculate if path invalidated, e.g. world resized or wall built/destroyed
+        } catch (final ImpossiblePathException e) {
+            //Unable to actually reach the new destination, so don't bother
+            //TODO Signal that the goal is impossible somehow
+        }
     }
 
     @Handler(DestinationCleared.class)
@@ -62,8 +67,8 @@ public final class Navigator {
         runningTask = null;
     }
 
-    public boolean isReachable(final World.Coordinates destination) {
-        return grapher.isReachable(destination);
+    public boolean isLegalDestination(final World.Coordinates destination) {
+        return grapher.isLegalDestination(destination);
     }
 
 }

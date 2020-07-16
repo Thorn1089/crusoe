@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.is;
 import com.atomiccomics.crusoe.Component;
 import com.atomiccomics.crusoe.Engine;
 import com.atomiccomics.crusoe.event.Event;
+import com.atomiccomics.crusoe.graph.ImpossiblePathException;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,7 @@ import java.util.LinkedList;
 public class PathfindingIT {
 
     @Test
-    void pathBetweenPlayerAndGoalCanBeFollowed() {
+    void pathBetweenPlayerAndGoalCanBeFollowed() throws ImpossiblePathException {
         final var engine = new Engine();
 
         final var grapher = new Grapher();

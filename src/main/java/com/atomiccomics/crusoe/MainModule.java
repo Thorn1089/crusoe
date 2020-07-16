@@ -1,14 +1,16 @@
 package com.atomiccomics.crusoe;
 
 import com.atomiccomics.crusoe.player.PlayerClient;
+import com.atomiccomics.crusoe.player.ai.BuildWallActionFactory;
+import com.atomiccomics.crusoe.player.ai.PickUpPickaxeActionFactory;
+import com.atomiccomics.crusoe.player.ai.Planner;
+import com.atomiccomics.crusoe.player.ai.PlayerMoveActionFactory;
 import com.atomiccomics.crusoe.time.ExecutorScheduler;
 import com.atomiccomics.crusoe.time.Scheduler;
 import com.atomiccomics.crusoe.world.WorldClient;
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.Singleton;
+import com.google.inject.*;
 
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -35,6 +37,16 @@ public class MainModule extends AbstractModule {
     @Provides
     public WorldClient worldClient(final Engine engine) {
         return engine::updateWorld;
+    }
+
+    @Provides
+    @Singleton
+    public Planner planner(final Injector injector) {
+        return new Planner(Arrays.asList(
+             new BuildWallActionFactory(),
+             new PickUpPickaxeActionFactory(),
+             new PlayerMoveActionFactory()
+        ), injector);
     }
 
 }

@@ -28,4 +28,8 @@ public final class Holder {
         return !inventory.isEmpty();
     }
 
+    public boolean has(final Item item) {
+        return inventory.contains(item);
+    }
+
 }

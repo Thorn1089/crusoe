@@ -2,10 +2,14 @@ package com.atomiccomics.crusoe.world;
 
 import com.atomiccomics.crusoe.Handler;
 import com.atomiccomics.crusoe.RegisteredComponent;
+import com.atomiccomics.crusoe.graph.AStarPathfinder;
+import com.atomiccomics.crusoe.graph.Graph;
+import com.atomiccomics.crusoe.graph.ImpossiblePathException;
 import com.google.inject.Singleton;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 @Singleton
 @RegisteredComponent
@@ -13,11 +17,9 @@ public final class Grapher {
 
     private volatile World.Dimensions dimensions;
     private final Set<World.Coordinates> obstacles = new HashSet<>();
-    private volatile Map<World.Coordinates, Graph.Node> worldToGraph;
-    private volatile  Map<Graph.Node, World.Coordinates> graphToWorld;
 
     private volatile boolean isDirty = false;
-    private volatile Graph graph;
+    private volatile Graph<World.Coordinates, World.Direction> graph;
 
     @Handler(WorldResized.class)
     public void handleWorldResized(final WorldResized event) {
@@ -38,34 +40,32 @@ public final class Grapher {
     }
 
     private void rebuildGraph() {
-        worldToGraph = new HashMap<>();
-        graphToWorld = new HashMap<>();
-
-        final var builder = Graph.newBuilder();
-        final var matrix = new Graph.Node[dimensions.width()][dimensions.height()];
+        final Graph.UndirectedGraphBuilder<World.Coordinates, World.Direction> builder = Graph.undirectedGraphBuilder();
+        final var matrix = new ArrayList<ArrayList<Graph.Node<World.Coordinates>>>(dimensions.width());
         for(int i = 0; i < dimensions.width(); i++) {
+            final var innerList = new ArrayList<Graph.Node<World.Coordinates>>(dimensions.height());
+            matrix.add(i, innerList);
             for(int j = 0; j < dimensions.height(); j++) {
                 final var coordinates = new World.Coordinates(i, j);
                 if(obstacles.contains(coordinates)) {
+                    innerList.add(j, null);
                     continue;
                 }
 
-                final var node = builder.addNode();
-                matrix[i][j] = node;
-                worldToGraph.put(coordinates, node);
-                graphToWorld.put(node, coordinates);
+                final var node = builder.addNode(coordinates);
+                innerList.add(j, node);
 
                 if(i > 0) {
-                    Optional.ofNullable(matrix[i-1][j]).ifPresent(n -> builder.connect(n, node, 1));
+                    Optional.ofNullable(matrix.get(i-1).get(j)).ifPresent(n -> builder.connect(n, node, World.Direction.EAST, World.Direction.WEST, 1));
                 }
                 if(j > 0) {
-                    Optional.ofNullable(matrix[i][j-1]).ifPresent(n -> builder.connect(n, node, 1));
+                    Optional.ofNullable(matrix.get(i).get(j-1)).ifPresent(n -> builder.connect(n, node, World.Direction.NORTH, World.Direction.SOUTH, 1));
                 }
                 if(i > 0 && j > 0) {
-                    Optional.ofNullable(matrix[i-1][j-1]).ifPresent(n -> builder.connect(n, node, 1));
+                    Optional.ofNullable(matrix.get(i-1).get(j-1)).ifPresent(n -> builder.connect(n, node, World.Direction.NORTHEAST, World.Direction.SOUTHWEST, 1));
                 }
                 if(i > 0 && j < dimensions.height() - 1) {
-                    Optional.ofNullable(matrix[i-1][j+1]).ifPresent(n -> builder.connect(n, node, 1));
+                    Optional.ofNullable(matrix.get(i-1).get(j+1)).ifPresent(n -> builder.connect(n, node, World.Direction.SOUTHEAST, World.Direction.NORTHWEST, 1));
                 }
             }
         }
@@ -74,38 +74,33 @@ public final class Grapher {
         isDirty = false;
     }
 
-    public List<World.Direction> findPathBetween(final World.Coordinates start, final World.Coordinates end) {
+    public List<World.Direction> findPathBetween(final World.Coordinates start, final World.Coordinates end) throws ImpossiblePathException {
         if(isDirty) {
             rebuildGraph();
+        }
+
+        final var startNode = graph.node(start);
+        final var endNode = graph.node(end);
+
+        if(startNode.isEmpty() || endNode.isEmpty()) {
+            throw new IllegalArgumentException("Cannot route between nodes when one of them is not present in the graph");
         }
 
         final var pathfinder = new AStarPathfinder();
-        final BiFunction<Graph.Node, Graph.Node, Long> manhattanDistance = (a, b) -> {
-            final World.Coordinates first = graphToWorld.get(a);
-            final World.Coordinates second = graphToWorld.get(b);
+        final BiFunction<Graph.Node<World.Coordinates>, Graph.Node<World.Coordinates>, Long> manhattanDistance = (a, b) -> World.Coordinates.manhattanDistance(a.value(), b.value());
 
-            return World.Coordinates.manhattanDistance(first, second);
-        };
+        final var path = pathfinder.findPathFrom(startNode.get(), endNode.get(), graph, manhattanDistance);
 
-        final var path = new ArrayDeque<>(pathfinder.findPathFrom(worldToGraph.get(start), worldToGraph.get(end), graph, manhattanDistance));
-
-        final var directions = new LinkedList<World.Direction>();
-        Graph.Node prev = path.removeFirst();
-        while(!path.isEmpty()) {
-            final var curr = path.removeFirst();
-            final var direction = graphToWorld.get(prev).to(graphToWorld.get(curr));
-            directions.add(direction);
-            prev = curr;
-        }
-
-        return directions;
+        return path.stream()
+                .map(Graph.Edge::via)
+                .collect(Collectors.toList());
     }
 
-    public boolean isReachable(final World.Coordinates destination) {
+    public boolean isLegalDestination(final World.Coordinates destination) {
         if(isDirty) {
             rebuildGraph();
         }
 
-        return worldToGraph.containsKey(destination);
+        return graph.node(destination).isPresent();
     }
 }

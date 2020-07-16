@@ -3,16 +3,13 @@ package com.atomiccomics.crusoe;
 import com.atomiccomics.crusoe.event.Event;
 import com.atomiccomics.crusoe.item.Item;
 import com.atomiccomics.crusoe.player.*;
-import com.atomiccomics.crusoe.time.ExecutorScheduler;
 import com.atomiccomics.crusoe.ui.*;
-import com.atomiccomics.crusoe.world.Grapher;
 import com.atomiccomics.crusoe.world.PlayerMoved;
 import com.atomiccomics.crusoe.world.World;
 import com.google.inject.Inject;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -29,7 +26,6 @@ import javafx.scene.input.MouseEvent;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -190,7 +186,7 @@ public final class GameController {
         final Observable<Function<Player, List<Event<?>>>> updateFromPlayerNavigate = rightClicks
                 .filter(e -> modeDetector.currentMode() == ModeDetector.InputMode.COMMAND)
                 .map(e -> new World.Coordinates((int)projection.scaleToWorldX(e.getX()), (int)projection.scaleToWorldY(e.getY())))
-                .filter(navigator::isReachable)
+                .filter(navigator::isLegalDestination)
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
                 .map(dest -> p -> p.setDestination(dest));
 
